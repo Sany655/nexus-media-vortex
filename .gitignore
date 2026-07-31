@@ -1,0 +1,41 @@
+# Private API Keys & Credentials (CRITICAL)
+.env
+.env.*
+*.pem
+
+# Local Analytics & Database
+*.db
+*.sqlite3
+
+# Channel-specific Auth & State (CRITICAL)
+channels/*/youtube_token.json
+channels/*/instagram_session.json
+channels/*/tiktok_cookies.txt
+channels/*/strategy_state.json
+channels/*/client_secret.json
+
+# Virtual Environments & Caches
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Heavy Generated Media Assets
+# (We keep assets/avatar/ so the base avatar is pushed to git)
+assets/audio_clips/
+assets/video_clips/
+assets/temp/
+assets/final/
+
+# Next.js / Dashboard UI
+dashboard/node_modules/
+dashboard/.next/
+dashboard/out/
+dashboard/build/
+dashboard/.vercel/
+
+# Logs and Scratch Files
+*.log
+engine.log
+scrape_result.txt
+.DS_Store
