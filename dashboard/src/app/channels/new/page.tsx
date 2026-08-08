@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { Bot, User, ArrowRight, Activity, Plus, Check, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
+import { db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function NewChannelStrategy() {
   const router = useRouter();
@@ -74,22 +76,20 @@ export default function NewChannelStrategy() {
       if (!user) throw new Error("Must be logged in.");
       const uid = user.uid;
       
-      const res = await fetch('/api/channels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uid,
-          ...proposedConfig
-        })
+      const channel_key = proposedConfig.name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+      
+      // Save directly to Firestore
+      const channelRef = doc(db, 'channels', channel_key);
+      await setDoc(channelRef, {
+        user_id: uid,
+        channel_key,
+        ...proposedConfig,
+        api_keys_json: "{}",
+        created_at: new Date().toISOString()
       });
       
-      const data = await res.json();
-      if (data.success) {
-        alert(`Channel '${proposedConfig.name}' created successfully! (Key: ${data.channel_key})`);
-        router.push('/');
-      } else {
-        alert("Failed to create channel: " + data.error);
-      }
+      alert(`Channel '${proposedConfig.name}' created successfully!`);
+      router.push('/');
     } catch (err: any) {
       alert("Error saving channel: " + err.message);
     } finally {
@@ -229,6 +229,10 @@ export default function NewChannelStrategy() {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-black/5 dark:bg-black/30 p-4 rounded-lg border border-black/5 dark:border-white/5 md:col-span-2 text-center">
+                  <div className="text-xs text-emerald-500 uppercase font-bold tracking-wider mb-1">Campaign Objective Node</div>
+                  <div className="text-xl font-medium text-emerald-700 dark:text-emerald-400">{proposedConfig.objective_node}</div>
+                </div>
                 <div className="bg-black/5 dark:bg-black/30 p-4 rounded-lg border border-black/5 dark:border-white/5">
                   <div className="text-xs text-neutral-500 uppercase font-bold tracking-wider mb-1">Niche</div>
                   <div className="text-emerald-700 dark:text-emerald-100">{proposedConfig.niche}</div>

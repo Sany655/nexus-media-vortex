@@ -17,6 +17,7 @@ The JSON schema must exactly match this:
   "name": "A catchy channel name (string)",
   "niche": "The channel niche (string)",
   "target_audience": "The target demographic (string)",
+  "objective_node": "A short, dynamic category name summarizing their objective (e.g., 'Viral Monetization', 'SaaS Marketing', 'Dropshipping Sales', 'Personal Branding', etc. Be creative and precise).",
   "topic_prompt": "Instructions for selecting a viral topic in this niche (string)",
   "script_prompt": "Instructions for writing a 140-160 word script with hook and CTA (string)",
   "visual_prompt": "Instructions for generating two distinct visual stock footage keywords per sentence (string)",
