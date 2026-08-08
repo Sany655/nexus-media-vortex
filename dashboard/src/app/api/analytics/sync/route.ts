@@ -7,7 +7,10 @@ export async function POST() {
   
   console.log("Triggering Analytics Sync...");
   
-  exec(`.\\venv\\Scripts\\python.exe modules/analytics.py`, { cwd: enginePath }, (error, stdout, stderr) => {
+  exec(`.\\venv\\Scripts\\python.exe modules/analytics.py`, { 
+    cwd: enginePath,
+    env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
+  }, (error, stdout, stderr) => {
     if (error) {
       console.error(`Analytics Sync Error: ${error.message}`);
     } else {

@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     const privateMode = body.privateMode === true;
     const retryTopic = body.retryTopic || null;
     const channel_id = body.channel || "neuron_buster";
+    const content_type = body.contentType || "video";
 
     // Check if already running
     try {
@@ -25,15 +26,15 @@ export async function POST(req: Request) {
     }
 
     // Create override.json
-    const overridePayload = JSON.stringify({ ig, yt, tk, privateMode, retryTopic, channel_id });
+    const overridePayload = JSON.stringify({ ig, yt, tk, privateMode, retryTopic, channel_id, content_type });
     const overridePath = path.join(enginePath, 'override.json');
     await fs.writeFile(overridePath, overridePayload, 'utf-8');
     await fs.writeFile(lockPath, 'running', 'utf-8');
     await fs.writeFile(logPath, 'Genesis Engine Ignited via API...\n', 'utf-8');
 
-    console.log(`Triggering Genesis Engine for ${channel_id}...`);
+    console.log(`Triggering Genesis Engine for ${channel_id} (Type: ${content_type})...`);
     
-    const args = `--ig ${ig} --yt ${yt} --tk ${tk} --private ${privateMode} --channel ${channel_id}`;
+    const args = `--ig ${ig} --yt ${yt} --tk ${tk} --private ${privateMode} --channel ${channel_id} --type ${content_type}`;
     exec(`run_genesis.bat ${args}`, { cwd: enginePath }, async (error, stdout, stderr) => {
     // Cleanup lock when finished
     try { await fs.unlink(lockPath); } catch (e) {}

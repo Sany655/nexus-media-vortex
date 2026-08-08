@@ -13,11 +13,11 @@ class AnalyticsEngine:
         self.uploader = DistributionNode()
 
     def sync_youtube_analytics(self):
-        print("\n📊 Starting YouTube Analytics Sync...")
+        print("\n[Analytics] Starting YouTube Analytics Sync...")
         
         youtube = self.uploader.authenticate_youtube()
         if not youtube:
-            print("❌ Cannot authenticate for analytics. Token missing or invalid.")
+            print("[Error] Cannot authenticate for analytics. Token missing or invalid.")
             return False
 
         videos = self.db.get_all_youtube_ids()
@@ -40,13 +40,13 @@ class AnalyticsEngine:
                     vid_id = v["youtube_id"]
                     if vid_id in stats_map:
                         views = stats_map[vid_id]
-                        print(f"   📈 {v['topic'][:30]}... : {views} views")
+                        print(f"   [+] {v['topic'][:30]}... : {views} views")
                         self.db.update_analytics(v["topic"], yt_views=views)
                         
             except Exception as e:
-                print(f"❌ Failed to fetch analytics batch: {e}")
+                print(f"[Error] Failed to fetch analytics batch: {e}")
 
-        print("✅ YouTube Analytics Sync Complete!")
+        print("[Success] YouTube Analytics Sync Complete!")
         return True
 
 if __name__ == "__main__":

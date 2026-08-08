@@ -14,16 +14,15 @@ export async function GET(request: Request) {
     }
   });
 
-  const all = promisify(db.all.bind(db));
-  try {
-    // Attempt to select all content logs
-    const rows = await all('SELECT * FROM content_log WHERE channel_id = ? ORDER BY id DESC', [channel]);
-    return NextResponse.json({ success: true, data: rows });
-  } catch (error) {
-    // If table doesn't exist or other error, return empty array
-    console.error("Query error:", error);
-    return NextResponse.json({ success: true, data: [] });
-  } finally {
-    db.close();
-  }
+  return new Promise<NextResponse>((resolve) => {
+    db.all('SELECT * FROM content_log WHERE channel_id = ? ORDER BY id DESC', [channel], (err, rows) => {
+      if (err) {
+        console.error("Query error:", err);
+        resolve(NextResponse.json({ success: true, data: [] }));
+      } else {
+        resolve(NextResponse.json({ success: true, data: rows || [] }));
+      }
+      db.close();
+    });
+  });
 }

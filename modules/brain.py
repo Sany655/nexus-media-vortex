@@ -15,13 +15,16 @@ class ContentBrain:
         self.channel_id = channel_id
         self.db = DatabaseManager(channel_id=self.channel_id)
         
-        # Load channel configuration
-        config_path = os.path.join(os.getcwd(), 'channels', self.channel_id, 'config.json')
-        if os.path.exists(config_path):
-            with open(config_path, 'r', encoding='utf-8') as f:
-                self.config = json.load(f)
+        # Load channel configuration from DB
+        channel_data = self.db.get_channel_config(self.channel_id)
+        if channel_data:
+            self.config = channel_data
+            try:
+                self.api_keys = json.loads(channel_data.get('api_keys_json', '{}'))
+            except:
+                self.api_keys = {}
         else:
-            print(f"⚠️ Warning: No config.json found for channel '{self.channel_id}'. Using fallbacks.")
+            print(f"⚠️ Warning: No config found in DB for channel '{self.channel_id}'. Using fallbacks.")
             self.config = {
                 "niche": "Tech",
                 "target_audience": "US/UK",
@@ -32,6 +35,13 @@ class ContentBrain:
                 "cta_template": "🚀 Get the exact workflow here: [LINK IN BIO]",
                 "hashtags_template": "#tech #business #viral"
             }
+            self.api_keys = {}
+            
+        # Override Gemini API key if present in DB
+        custom_gemini_key = self.api_keys.get('gemini_api_key')
+        if custom_gemini_key:
+            global client
+            client = genai.Client(api_key=custom_gemini_key)
 
     def get_trending_topic(self):
         """
@@ -92,11 +102,37 @@ class ContentBrain:
         )
         return response.text.strip()
 
-    def generate_script(self, topic):
+    def generate_script(self, topic, content_type="video"):
         """
-        Generates a structured JSON script with visual cues based on channel config.
+        Generates a structured JSON script with visual cues based on channel config and content type.
         """
-        print(f"📝 Writing script for: {topic}...")
+        print(f"📝 Writing script for: {topic} (Type: {content_type})...")
+        
+        if content_type == "post":
+            prompt = f"""
+            {self.config.get('script_prompt')} You are writing a highly engaging text-only post for social media (X/LinkedIn) about: {topic}.
+            Write a 3-4 paragraph engaging post. No video cues. No JSON formatting needed, just the text.
+            """
+            try:
+                response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                return [{"text": response.text.strip(), "visual_1": "", "visual_2": "", "mood": ""}]
+            except Exception as e:
+                print(f"❌ Error generating post: {e}")
+                return None
+        elif content_type == "image":
+            prompt = f"""
+            {self.config.get('script_prompt')} You are designing an engaging image post about: {topic}.
+            Write a short 1-2 sentence caption for the image, and a highly detailed image generation prompt (visual description) for DALL-E/Stable Diffusion.
+            Output strict JSON: {{"caption": "...", "image_prompt": "..."}}
+            """
+            try:
+                response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+                clean_text = response.text.replace('```json', '').replace('```', '').strip()
+                return [json.loads(clean_text)]
+            except Exception as e:
+                print(f"❌ Error generating image prompt: {e}")
+                return None
+                
         prompt = f"""
         {self.config.get('script_prompt')} You are writing about: {topic}.
         

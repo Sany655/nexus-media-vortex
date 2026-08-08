@@ -2,6 +2,7 @@ import os
 import json
 import time
 import datetime
+import sqlite3
 from google import genai
 from modules.database import DatabaseManager
 from dotenv import load_dotenv
@@ -11,41 +12,106 @@ load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
-CHANNEL_ID = "neuron_buster"
-CHANNEL_DIR = os.path.join(os.getcwd(), "channels", CHANNEL_ID)
-CONFIG_PATH = os.path.join(CHANNEL_DIR, "config.json")
-STATE_PATH = os.path.join(CHANNEL_DIR, "strategy_state.json")
+DB_PATH = os.path.join(os.getcwd(), "nexus_media_vortex.db")
 
-def get_state():
-    if not os.path.exists(STATE_PATH):
+def get_channels():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT channel_key, niche, target_audience, topic_prompt, script_prompt, visual_prompt, metadata_prompt, cta_template, hashtags_template, api_keys_json FROM channels")
+    rows = cursor.fetchall()
+    conn.close()
+    
+    channels = []
+    for r in rows:
+        channel_key = r[0]
+        try:
+            config = json.loads(r[9] or '{}')
+        except:
+            config = {}
+        
+        # Merge prompt columns into the config object for the brain to analyze
+        config["niche"] = r[1]
+        config["target_audience"] = r[2]
+        config["topic_prompt"] = r[3]
+        config["script_prompt"] = r[4]
+        config["visual_prompt"] = r[5]
+        config["metadata_prompt"] = r[6]
+        config["cta_template"] = r[7]
+        config["hashtags_template"] = r[8]
+        
+        channels.append({"channel_key": channel_key, "config": config})
+    return channels
+
+def save_channel_config(channel_key, config):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Extract prompts out of config dict
+    niche = config.get("niche", "")
+    target_audience = config.get("target_audience", "")
+    topic_prompt = config.get("topic_prompt", "")
+    script_prompt = config.get("script_prompt", "")
+    visual_prompt = config.get("visual_prompt", "")
+    metadata_prompt = config.get("metadata_prompt", "")
+    cta_template = config.get("cta_template", "")
+    hashtags_template = config.get("hashtags_template", "")
+    
+    # We remove these from the dict so they don't bloat api_keys_json
+    api_keys_json_dict = {k: v for k, v in config.items() if k not in [
+        "niche", "target_audience", "topic_prompt", "script_prompt", 
+        "visual_prompt", "metadata_prompt", "cta_template", "hashtags_template"
+    ]}
+    
+    cursor.execute("""
+        UPDATE channels SET 
+            niche = ?, target_audience = ?, topic_prompt = ?, script_prompt = ?, 
+            visual_prompt = ?, metadata_prompt = ?, cta_template = ?, hashtags_template = ?,
+            api_keys_json = ?
+        WHERE channel_key = ?
+    """, (
+        niche, target_audience, topic_prompt, script_prompt, 
+        visual_prompt, metadata_prompt, cta_template, hashtags_template,
+        json.dumps(api_keys_json_dict), channel_key
+    ))
+    conn.commit()
+    conn.close()
+
+def get_state(channel_key):
+    channel_dir = os.path.join(os.getcwd(), "channels", channel_key)
+    os.makedirs(channel_dir, exist_ok=True)
+    state_path = os.path.join(channel_dir, "strategy_state.json")
+    
+    if not os.path.exists(state_path):
         default_state = {
             "next_analysis_timestamp": datetime.datetime.now().isoformat(),
             "shadowban_levels": {"yt": 0, "ig": 0, "tk": 0},
             "cooldown_end": {"yt": None, "ig": None, "tk": None}
         }
-        with open(STATE_PATH, "w") as f:
+        with open(state_path, "w") as f:
             json.dump(default_state, f, indent=2)
         return default_state
     
-    with open(STATE_PATH, "r") as f:
+    with open(state_path, "r") as f:
         state = json.load(f)
-        # Ensure new fields exist for old state files
         if "shadowban_levels" not in state:
             state["shadowban_levels"] = {"yt": 0, "ig": 0, "tk": 0}
         if "cooldown_end" not in state:
             state["cooldown_end"] = {"yt": None, "ig": None, "tk": None}
         return state
 
-def save_state(state):
-    with open(STATE_PATH, "w") as f:
+def save_state(channel_key, state):
+    channel_dir = os.path.join(os.getcwd(), "channels", channel_key)
+    os.makedirs(channel_dir, exist_ok=True)
+    state_path = os.path.join(channel_dir, "strategy_state.json")
+    with open(state_path, "w") as f:
         json.dump(state, f, indent=2)
 
-def fetch_analytics():
-    print("📊 Fetching latest analytics...")
-    db = DatabaseManager(channel_id=CHANNEL_ID)
+def fetch_analytics(channel_key):
+    print(f"📊 [{channel_key}] Fetching latest analytics...")
+    db = DatabaseManager(channel_id=channel_key)
     
     # Placeholder for actual API/Playwright Scraping
-    print("   🌐 Booting Playwright to scrape TikTok profile...")
+    print(f"   🌐 Booting Playwright to scrape TikTok profile for {channel_key}...")
     time.sleep(2)
     print("   ✅ Scraped latest TikTok views.")
     
@@ -57,45 +123,40 @@ def fetch_analytics():
     
     return db.get_performance_report()
 
-def apply_shadowban_protocol(state, shadowbanned_platforms):
-    with open(CONFIG_PATH, "r") as f:
-        config = json.load(f)
-        
+def apply_shadowban_protocol(channel_key, config, state, shadowbanned_platforms):
     platforms = ["yt", "ig", "tk"]
     now = datetime.datetime.now()
-    
-    # We will track if we need to force the next analysis to 1 day
     force_1_day = False
     
+    channel_dir = os.path.join(os.getcwd(), "channels", channel_key)
+    
     for plat in platforms:
-        # Check if cooldown has ended
         cooldown_str = state["cooldown_end"].get(plat)
         if cooldown_str:
             cooldown_end_time = datetime.datetime.fromisoformat(cooldown_str)
             if now >= cooldown_end_time:
-                print(f"❄️ {plat.upper()}: 14-Day Cooldown has ended. Unpausing...")
+                print(f"❄️ [{channel_key}] {plat.upper()}: 14-Day Cooldown has ended. Unpausing...")
                 state["cooldown_end"][plat] = None
                 config[f"pause_{plat}"] = False
-                state["shadowban_levels"][plat] = 2.5 # Intermediate state between 2 and 3
+                state["shadowban_levels"][plat] = 2.5
         
-        # If Gemini flagged it this round
         if plat in shadowbanned_platforms:
             current_level = state["shadowban_levels"][plat]
             
             if current_level == 0:
-                print(f"⚠️ SHADOWBAN WARNING [Level 1]: Gemini suspects {plat.upper()} is flatlining.")
+                print(f"⚠️ [{channel_key}] SHADOWBAN WARNING [Level 1]: Gemini suspects {plat.upper()} is flatlining.")
                 state["shadowban_levels"][plat] = 1
                 force_1_day = True
                 
             elif current_level == 1:
-                print(f"❄️ SHADOWBAN COOLDOWN [Level 2]: {plat.upper()} is still flatlining. Initiating 14-day pause.")
+                print(f"❄️ [{channel_key}] SHADOWBAN COOLDOWN [Level 2]: {plat.upper()} is still flatlining. Initiating 14-day pause.")
                 state["shadowban_levels"][plat] = 2
                 state["cooldown_end"][plat] = (now + datetime.timedelta(days=14)).isoformat()
                 config[f"pause_{plat}"] = True
                 
-            elif current_level == 2.5: # Failed immediately after cooldown
+            elif current_level == 2.5:
                 print("\n" + "!"*60)
-                print(f"💀 SHADOWBAN PERMANENT [Level 3]: {plat.upper()} failed after 14-day cooldown.")
+                print(f"💀 [{channel_key}] SHADOWBAN PERMANENT [Level 3]: {plat.upper()} failed after 14-day cooldown.")
                 print(f"💀 THE PLATFORM ACCOUNT HAS BEEN BLACKLISTED. SEVERING CONNECTION.")
                 print("!"*60 + "\n")
                 
@@ -103,37 +164,29 @@ def apply_shadowban_protocol(state, shadowbanned_platforms):
                 config[f"disable_{plat}"] = True
                 config[f"pause_{plat}"] = False
                 
-                # Delete session files to sever connection
                 if plat == "yt":
-                    session_file = os.path.join(CHANNEL_DIR, "youtube_token.json")
+                    session_file = os.path.join(channel_dir, "youtube_token.json")
                     if os.path.exists(session_file): os.remove(session_file)
                 elif plat == "ig":
-                    session_file = os.path.join(CHANNEL_DIR, "instagram_session.json")
+                    session_file = os.path.join(channel_dir, "instagram_session.json")
                     if os.path.exists(session_file): os.remove(session_file)
                 elif plat == "tk":
-                    session_file = os.path.join(CHANNEL_DIR, "tiktok_cookies.txt")
+                    session_file = os.path.join(channel_dir, "tiktok_cookies.txt")
                     if os.path.exists(session_file): os.remove(session_file)
                     
         else:
-            # If Gemini didn't flag it, and it's not on cooldown, reset its level to 0!
-            # Only reset if it's currently at 1 or 2.5 (we don't reset 3 automatically, it's permanently dead)
             if state["shadowban_levels"][plat] in [1, 2.5]:
-                print(f"✅ {plat.upper()}: Views are recovering. Resetting shadowban level to 0.")
+                print(f"✅ [{channel_key}] {plat.upper()}: Views are recovering. Resetting shadowban level to 0.")
                 state["shadowban_levels"][plat] = 0
 
-    with open(CONFIG_PATH, "w") as f:
-        json.dump(config, f, indent=2)
-        
+    save_channel_config(channel_key, config)
     return state, force_1_day
 
-def analyze_and_pivot(report, state):
-    print("🧠 Initiating Strategy Brain Analysis...")
+def analyze_and_pivot(channel_key, current_config, report, state):
+    print(f"🧠 [{channel_key}] Initiating Strategy Brain Analysis...")
     
-    with open(CONFIG_PATH, "r") as f:
-        current_config = json.load(f)
-        
     prompt = f"""
-    You are an elite, AI-driven YouTube and TikTok channel manager. 
+    You are an elite, AI-driven YouTube and TikTok channel manager for '{channel_key}'. 
     Your goal is to maximize the virality and income of this channel by dynamically adjusting its content strategy.
     
     Here is the CURRENT strategy configuration:
@@ -181,52 +234,52 @@ def analyze_and_pivot(report, state):
         clean_text = response.text.replace('```json', '').replace('```', '').strip()
         analysis_result = json.loads(clean_text)
         
-        # 1. Update Config (Strategy Pivot)
-        with open(CONFIG_PATH, "w") as f:
-            json.dump(analysis_result["config"], f, indent=2)
-            
-        print(f"\n🚀 STRATEGY PIVOT SUCCESSFUL!")
+        print(f"\n🚀 [{channel_key}] STRATEGY PIVOT SUCCESSFUL!")
         print(f"Reasoning: {analysis_result['reasoning']}")
         
-        # 2. Run Shadowban Protocol
-        shadowbanned_list = analysis_result.get("shadowbanned_platforms", [])
-        state, force_1_day = apply_shadowban_protocol(state, shadowbanned_list)
+        # Merge new config and update DB
+        new_config = analysis_result["config"]
+        # Save happens inside apply_shadowban_protocol
         
-        # 3. Schedule
+        shadowbanned_list = analysis_result.get("shadowbanned_platforms", [])
+        state, force_1_day = apply_shadowban_protocol(channel_key, new_config, state, shadowbanned_list)
+        
         days = 1 if force_1_day else analysis_result.get("next_analysis_days", 3)
-        print(f"Next analysis scheduled in: {days} days.")
+        print(f"[{channel_key}] Next analysis scheduled in: {days} days.")
         return days, state
         
     except Exception as e:
-        print(f"❌ Brain Analysis Failed: {e}")
-        return 1, state # Try again tomorrow
+        print(f"❌ [{channel_key}] Brain Analysis Failed: {e}")
+        return 1, state
 
 def main_loop():
-    print("🧠 Strategy Brain Daemon Started. Monitoring channel performance...")
+    print("🧠 Multi-Channel Strategy Brain Daemon Started. Monitoring all channels...")
     
     while True:
-        state = get_state()
-        next_analysis = datetime.datetime.fromisoformat(state["next_analysis_timestamp"])
-        now = datetime.datetime.now()
+        channels = get_channels()
         
-        if now >= next_analysis:
-            print(f"\n⏰ Time for Strategy Review! ({now.strftime('%Y-%m-%d %H:%M')})")
+        for ch in channels:
+            channel_key = ch["channel_key"]
+            config = ch["config"]
             
-            # 1. Fetch Data
-            report = fetch_analytics()
+            state = get_state(channel_key)
+            next_analysis = datetime.datetime.fromisoformat(state["next_analysis_timestamp"])
+            now = datetime.datetime.now()
             
-            # 2. Analyze, Pivot & Shadowban Escalation
-            days_to_wait, state = analyze_and_pivot(report, state)
-            
-            # 3. Schedule Next Run
-            new_time = now + datetime.timedelta(days=days_to_wait)
-            state["next_analysis_timestamp"] = new_time.isoformat()
-            save_state(state)
-            
-            print(f"💤 Strategy Brain going to sleep until {new_time.strftime('%Y-%m-%d %H:%M')}...")
-            
-        else:
-            time.sleep(3600)
+            if now >= next_analysis:
+                print(f"\n⏰ [{channel_key}] Time for Strategy Review! ({now.strftime('%Y-%m-%d %H:%M')})")
+                
+                report = fetch_analytics(channel_key)
+                days_to_wait, state = analyze_and_pivot(channel_key, config, report, state)
+                
+                new_time = now + datetime.timedelta(days=days_to_wait)
+                state["next_analysis_timestamp"] = new_time.isoformat()
+                save_state(channel_key, state)
+            else:
+                pass # Still sleeping for this channel
+                
+        print(f"\n💤 Daemon sleeping for 1 hour before next channel check...")
+        time.sleep(3600)
 
 if __name__ == "__main__":
     main_loop()

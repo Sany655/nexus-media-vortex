@@ -79,7 +79,10 @@ class DistributionNode:
         api_version = "v3"
         client_secrets_file = os.path.join(self.channel_dir, "client_secret.json")
         token_file = os.path.join(self.channel_dir, "youtube_token.json")
-        scopes = ["https://www.googleapis.com/auth/youtube.upload"]
+        scopes = [
+            "https://www.googleapis.com/auth/youtube.upload",
+            "https://www.googleapis.com/auth/youtube.readonly"
+        ]
 
         if not os.path.exists(client_secrets_file):
             raise FileNotFoundError("client_secret.json is missing! Cannot authenticate YouTube.")
@@ -96,11 +99,11 @@ class DistributionNode:
                 try:
                     credentials.refresh(Request())
                 except Exception as e:
-                    print(f"⚠️ YouTube Token Refresh Failed: {e}. Re-authenticating...")
+                    print(f"[Warning] YouTube Token Refresh Failed: {e}. Re-authenticating...")
                     credentials = None
                     
             if not credentials:
-                print("\n🚨 YOUTUBE AUTHENTICATION REQUIRED 🚨")
+                print("\n[!] YOUTUBE AUTHENTICATION REQUIRED [!]")
                 print("A browser window will open. Please grant permission.")
                 flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
                     client_secrets_file, scopes)

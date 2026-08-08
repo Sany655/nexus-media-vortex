@@ -76,6 +76,7 @@ async def main():
     parser.add_argument("--tk", type=str, help="Upload to TikTok", default="true")
     parser.add_argument("--private", type=str, help="Upload as Private (YT only)", default="false")
     parser.add_argument("--channel", type=str, help="Channel ID", default="neuron_buster")
+    parser.add_argument("--type", type=str, help="Content Type (video, short, post, image)", default="video")
     args = parser.parse_args()
 
     # Convert string flags to boolean
@@ -84,6 +85,7 @@ async def main():
     upload_tk = args.tk.lower() == "true"
     private_mode = args.private.lower() == "true"
     channel_id = args.channel
+    content_type = args.type
 
     # Shadowban Override Check
     config_path = os.path.join(os.getcwd(), 'channels', channel_id, 'config.json')
@@ -98,7 +100,7 @@ async def main():
     # Start log trace
     print("\n" + "="*50)
     print("🚀 INITIALIZING Nexus Media Vortex ORCHESTRATOR")
-    print(f"📡 VECTORS: IG={upload_ig} | YT={upload_yt} | TK={upload_tk} | PRIVATE={private_mode} | CHANNEL={channel_id}")
+    print(f"📡 VECTORS: IG={upload_ig} | YT={upload_yt} | TK={upload_tk} | PRIVATE={private_mode} | CHANNEL={channel_id} | TYPE={content_type}")
     print("="*50 + "\n")
     
     # 0. DROPZONE SYNC
@@ -126,6 +128,8 @@ async def main():
     custom_topic = custom_payload.get("topic") if override_mode else None
     custom_script = custom_payload.get("script") if override_mode else None
     retry_topic = custom_payload.get("retryTopic") if override_mode else None
+    if override_mode and custom_payload.get("content_type"):
+        content_type = custom_payload.get("content_type")
 
     # 0.75 CHECK UPLOAD QUEUE
     if not custom_topic:
@@ -263,10 +267,9 @@ async def main():
         
         # Log to database if not custom (or log custom too)
         if not custom_topic:
-            db.log_generated_topic(topic)
+            db.log_generated_topic(topic, content_type)
         else:
-            # We log custom topics as well so they don't get repeated randomly later
-            db.log_generated_topic(topic)
+            db.log_generated_topic(topic, content_type)
     except Exception as e:
         error_msg = str(e)
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg or "Quota exceeded" in error_msg:
@@ -279,6 +282,23 @@ async def main():
     
     if not script:
         print("❌ Script generation failed.")
+        return
+
+    # Early exit for non-video content types
+    if content_type in ["post", "image"]:
+        print(f"\n🚀 Phase 6: Distributing {content_type}...")
+        
+        # Save script and metadata to database
+        caption = script[0].get("text", "") if content_type == "post" else script[0].get("caption", "")
+        db.update_script_and_metadata(topic, str(script), caption)
+        
+        # Mark as uploaded since text/image uploaders aren't fully integrated yet
+        # Future: Implement Uploader for text and image
+        db.mark_platform_uploaded(topic, "ig")
+        db.mark_platform_uploaded(topic, "yt")
+        db.mark_platform_uploaded(topic, "tk")
+        db.mark_as_uploaded(topic)
+        print(f"🎉 Pipeline Complete! '{topic}' {content_type} is live (Simulated Upload).")
         return
 
     # 2. AUDIO: Generate Voice

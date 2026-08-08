@@ -1,0 +1,9 @@
+firebase deploy --only hosting:nexmed-vortex
+{
+  "hosting": {
+    "site": "nexmed-vortex",
+
+    "public": "public",
+    ...
+  }
+}

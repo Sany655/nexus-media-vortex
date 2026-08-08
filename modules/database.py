@@ -12,7 +12,8 @@ class DatabaseManager:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        # Create content_log
+        # We rely on migrate_db_v2.py for creating users, channels, schedules tables.
+        # But we still initialize content_log for safety if it's missing.
         try:
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS content_log (
@@ -27,41 +28,106 @@ class DatabaseManager:
                     uploaded_yt BOOLEAN DEFAULT 0,
                     uploaded_tk BOOLEAN DEFAULT 0,
                     youtube_id TEXT,
-                    ig_id TEXT
+                    ig_id TEXT,
+                    script TEXT,
+                    description TEXT,
+                    channel_id TEXT,
+                    user_id TEXT,
+                    content_type TEXT DEFAULT 'video'
                 )
             ''')
-            
-            # Migration for existing databases
-            try:
-                cursor.execute("ALTER TABLE content_log ADD COLUMN uploaded_ig BOOLEAN DEFAULT 0")
-                cursor.execute("ALTER TABLE content_log ADD COLUMN uploaded_yt BOOLEAN DEFAULT 0")
-                cursor.execute("ALTER TABLE content_log ADD COLUMN uploaded_tk BOOLEAN DEFAULT 0")
-            except sqlite3.OperationalError:
-                pass # Columns already exist
-
-            try:
-                cursor.execute("ALTER TABLE content_log ADD COLUMN youtube_id TEXT")
-            except sqlite3.OperationalError:
-                pass
-
-            try:
-                cursor.execute("ALTER TABLE content_log ADD COLUMN ig_id TEXT")
-            except sqlite3.OperationalError:
-                pass
-
-            try:
-                cursor.execute("ALTER TABLE content_log ADD COLUMN script TEXT")
-                cursor.execute("ALTER TABLE content_log ADD COLUMN description TEXT")
-            except sqlite3.OperationalError:
-                pass
-
             conn.commit()
         except Exception as e:
             print(f"Database initialization error: {e}")
         conn.close()
 
+    # --- USER MANAGEMENT ---
+    def get_or_create_user(self, firebase_uid, email):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM users WHERE firebase_uid = ?", (firebase_uid,))
+        row = cursor.fetchone()
+        if row:
+            conn.close()
+            return row[0]
+        else:
+            cursor.execute("INSERT INTO users (firebase_uid, email) VALUES (?, ?)", (firebase_uid, email))
+            conn.commit()
+            user_id = cursor.lastrowid
+            conn.close()
+            return user_id
+
+    # --- CHANNEL MANAGEMENT ---
+    def create_channel(self, user_id, channel_key, name, niche="", target_audience="", topic_prompt="", script_prompt="", visual_prompt="", metadata_prompt="", cta_template="", hashtags_template="", api_keys_json="{}"):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            cursor.execute('''
+                INSERT INTO channels 
+                (user_id, channel_key, name, niche, target_audience, topic_prompt, script_prompt, visual_prompt, metadata_prompt, cta_template, hashtags_template, api_keys_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (user_id, channel_key, name, niche, target_audience, topic_prompt, script_prompt, visual_prompt, metadata_prompt, cta_template, hashtags_template, api_keys_json))
+            conn.commit()
+            success = True
+        except sqlite3.IntegrityError:
+            success = False # Channel key probably already exists
+        conn.close()
+        return success
+        
+    def get_channels_for_user(self, user_id):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM channels WHERE user_id = ?", (user_id,))
+        # fetch column names
+        columns = [description[0] for description in cursor.description]
+        rows = cursor.fetchall()
+        channels = [dict(zip(columns, row)) for row in rows]
+        conn.close()
+        return channels
+        
+    def get_channel_config(self, channel_key):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM channels WHERE channel_key = ?", (channel_key,))
+        row = cursor.fetchone()
+        if row:
+            columns = [description[0] for description in cursor.description]
+            conn.close()
+            return dict(zip(columns, row))
+        conn.close()
+        return None
+
+    # --- SCHEDULE MANAGEMENT ---
+    def create_schedule(self, channel_key, content_type, cron_expression):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO schedules (channel_key, content_type, cron_expression) 
+            VALUES (?, ?, ?)
+        ''', (channel_key, content_type, cron_expression))
+        conn.commit()
+        conn.close()
+        return True
+        
+    def get_active_schedules(self):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM schedules WHERE is_active = 1")
+        columns = [description[0] for description in cursor.description]
+        rows = cursor.fetchall()
+        schedules = [dict(zip(columns, row)) for row in rows]
+        conn.close()
+        return schedules
+        
+    def update_schedule_last_run(self, schedule_id, last_run_timestamp):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE schedules SET last_run = ? WHERE id = ?", (last_run_timestamp, schedule_id))
+        conn.commit()
+        conn.close()
+
+    # --- CONTENT MANAGEMENT (Existing functionality) ---
     def get_past_topics(self):
-        """Returns a list of all previously generated topics."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute('SELECT topic FROM content_log WHERE channel_id = ?', (self.channel_id,))
@@ -70,7 +136,6 @@ class DatabaseManager:
         return topics
 
     def get_pending_uploads(self):
-        """Returns a list of topics marked as 'Generated' but not 'Uploaded'."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute("SELECT topic FROM content_log WHERE status = 'Generated' AND channel_id = ?", (self.channel_id,))
@@ -79,7 +144,6 @@ class DatabaseManager:
         return topics
 
     def sync_orphaned_files(self):
-        """Scans the assets/final directory and injects orphaned .mp4 files into the database."""
         final_dir = os.path.join(os.getcwd(), "assets", "final")
         if not os.path.exists(final_dir):
             return
@@ -93,7 +157,6 @@ class DatabaseManager:
         import re
         for filename in os.listdir(final_dir):
             if filename.endswith(".mp4"):
-                # Check if this filename belongs to any existing topic
                 matched = False
                 for t in existing_topics:
                     safe_t = re.sub(r'[^\w\s-]', '', t).strip().replace(' ', '_')
@@ -104,17 +167,16 @@ class DatabaseManager:
                 if not matched:
                     topic = filename.replace(".mp4", "").replace("_", " ")
                     print(f"📥 Dropzone Sync: Rescued orphaned file '{filename}' into the Queue.")
-                    cursor.execute('INSERT INTO content_log (topic, status, channel_id) VALUES (?, ?, ?)', (topic, 'Generated', self.channel_id))
+                    cursor.execute('INSERT INTO content_log (topic, status, channel_id, content_type) VALUES (?, ?, ?, ?)', (topic, 'Generated', self.channel_id, 'video'))
         
         conn.commit()
         conn.close()
 
-    def log_generated_topic(self, topic):
-        """Logs a newly generated topic."""
+    def log_generated_topic(self, topic, content_type="video"):
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            cursor.execute('INSERT INTO content_log (topic, status, channel_id) VALUES (?, ?, ?)', (topic, 'Generated', self.channel_id))
+            cursor.execute('INSERT INTO content_log (topic, status, channel_id, content_type) VALUES (?, ?, ?, ?)', (topic, 'Generated', self.channel_id, content_type))
             conn.commit()
             conn.close()
             return True
@@ -123,7 +185,6 @@ class DatabaseManager:
             return False
 
     def update_script_and_metadata(self, topic, script, description):
-        """Saves the generated script and description to the database for future blog/article repurposing."""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -148,7 +209,6 @@ class DatabaseManager:
         return {"ig": False, "yt": False, "tk": False}
 
     def mark_platform_uploaded(self, topic, platform):
-        # platform must be 'ig', 'yt', or 'tk'
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -179,7 +239,6 @@ class DatabaseManager:
             print(f"Failed to mark as failed: {e}")
 
     def update_analytics(self, topic, yt_views=0, tt_views=0, ig_views=0):
-        """Updates the view counts for a given topic."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute('''
@@ -227,10 +286,7 @@ class DatabaseManager:
         return [{"topic": r[0], "ig_id": r[1]} for r in rows]
         
     def check_and_update_all_analytics(self):
-        """Placeholder for routine analytics check across all APIs."""
         print("📊 Routine Analytics Check: Syncing latest view counts for uploaded videos...")
-        # Future implementation: iterate over uploaded videos, ping APIs, update rows.
-        # For now, just simulated logging.
         print("   ✅ Local Database synced.")
 
     def get_performance_report(self):
