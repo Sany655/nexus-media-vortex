@@ -43,7 +43,7 @@ export default function RegisterPage() {
           <Activity size={48} />
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-neutral-900 dark:text-white">
-          Create Genesis Account
+          Create Nexus Media Vortex Account
         </h2>
       </div>
 

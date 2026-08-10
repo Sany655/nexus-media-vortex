@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User, signOut as firebaseSignOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 
 interface AuthContextType {
@@ -28,19 +28,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       
-      // Auto-register user in SQLite backend
+      // Sync user email in Firestore
       if (currentUser) {
         try {
-          await fetch("/api/auth/sync", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              firebase_uid: currentUser.uid,
-              email: currentUser.email,
-            }),
-          });
+          const { doc, setDoc } = await import("firebase/firestore");
+          await setDoc(doc(db, "users", currentUser.uid), {
+            email: currentUser.email
+          }, { merge: true });
         } catch (e) {
-          console.error("Failed to sync user with backend", e);
+          console.error("Failed to sync user with Firestore", e);
         }
       }
 

@@ -1,16 +1,46 @@
 "use client";
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Bot, User, ArrowRight, Activity, Plus, Check, Loader2 } from 'lucide-react';
+import { Bot, User, ArrowRight, Activity, Plus, Check, Loader2, Key } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { db } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { GoogleGenAI } from '@google/genai';
+
+const SYSTEM_PROMPT = `
+You are an elite, AI-driven YouTube and TikTok channel manager and strategist.
+Your goal is to help the user design a highly monetizable, viral "faceless" channel.
+The user will tell you their niche or idea. Ask clarifying questions if needed (e.g., target audience, tone).
+Once you have enough context to populate the channel profile, you MUST output ONLY a valid JSON block containing the configuration.
+Do not output any markdown formatting like \`\`\`json, just the raw JSON object.
+
+The JSON schema must exactly match this:
+{
+  "name": "A catchy channel name (string)",
+  "niche": "The channel niche (string)",
+  "target_audience": "The target demographic (string)",
+  "objective_node": "A short, dynamic category name summarizing their objective (e.g., 'Viral Monetization', 'SaaS Marketing').",
+  "topic_prompt": "Instructions for selecting a viral topic in this niche (string)",
+  "script_prompt": "Instructions for writing a 140-160 word script with hook and CTA (string)",
+  "visual_prompt": "Instructions for generating two distinct visual stock footage keywords per sentence (string)",
+  "metadata_prompt": "Instructions for writing SEO optimized captions and hashtags (string)",
+  "cta_template": "A Call to Action template (string)",
+  "hashtags_template": "A list of 5-7 default hashtags (string)"
+}
+
+If you do NOT have enough information yet, reply normally as a helpful assistant asking for more details.
+`;
 
 export default function NewChannelStrategy() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   
+  const [geminiKey, setGeminiKey] = useState('');
+  const [isKeySet, setIsKeySet] = useState(false);
+  const [saveToDb, setSaveToDb] = useState(false);
+  const [checkingKey, setCheckingKey] = useState(true);
+
   const [messages, setMessages] = useState<{role: 'user'|'model', content: string}[]>([
     { role: 'model', content: "Hello! I am your Core Intelligence Strategist. What kind of channel do you want to build today? (e.g. 'I want to build a faceless horror channel for teens')" }
   ]);
@@ -20,7 +50,6 @@ export default function NewChannelStrategy() {
   const [proposedConfig, setProposedConfig] = useState<any>(null);
   const [modelType, setModelType] = useState('gemini-2.5-flash');
   
-  // For scrolling to bottom of chat
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const scrollToBottom = () => {
@@ -31,8 +60,50 @@ export default function NewChannelStrategy() {
     scrollToBottom();
   }, [messages, configReady]);
 
+  // Load API Key
+  useEffect(() => {
+    if (authLoading || !user) return;
+    
+    const loadKey = async () => {
+      // Check local storage first
+      const localKey = localStorage.getItem('GEMINI_API_KEY');
+      if (localKey) {
+        setGeminiKey(localKey);
+        setIsKeySet(true);
+        setCheckingKey(false);
+        return;
+      }
+
+      // Check DB
+      try {
+        const docRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().gemini_api_key) {
+          setGeminiKey(docSnap.data().gemini_api_key);
+          setIsKeySet(true);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+      setCheckingKey(false);
+    };
+    loadKey();
+  }, [user, authLoading]);
+
+  const handleSetKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!geminiKey) return;
+    
+    if (saveToDb && user) {
+      await setDoc(doc(db, 'users', user.uid), { gemini_api_key: geminiKey }, { merge: true });
+    } else {
+      localStorage.setItem('GEMINI_API_KEY', geminiKey);
+    }
+    setIsKeySet(true);
+  };
+
   const sendMessage = async () => {
-    if (!input.trim() || loading || configReady) return;
+    if (!input.trim() || loading || configReady || !geminiKey) return;
     
     const userMsg = input.trim();
     const newMessages = [...messages, { role: 'user' as const, content: userMsg }];
@@ -42,24 +113,45 @@ export default function NewChannelStrategy() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/strategy-assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages, modelType })
-      });
-      
-      const data = await res.json();
-      
-      if (!data.success) {
-        throw new Error(data.error);
+      if (modelType !== 'gemini-2.5-flash' && modelType !== 'gemini-2.5-pro') {
+        throw new Error(`Model provider for '${modelType}' is not yet configured for browser-side.`);
       }
+
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
       
-      if (data.isConfigReady && data.configData) {
-        setProposedConfig(data.configData);
+      const formattedMessages = newMessages.map((msg) => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      }));
+
+      const response = await ai.models.generateContent({
+        model: modelType,
+        contents: formattedMessages,
+        config: {
+          systemInstruction: SYSTEM_PROMPT,
+          temperature: 0.7,
+        }
+      });
+
+      const reply = response.text || '';
+      
+      let isConfigReady = false;
+      let configData = null;
+      
+      try {
+        const cleaned = reply.replace(/^\`\`\`json\n?/, '').replace(/\`\`\`$/, '').trim();
+        configData = JSON.parse(cleaned);
+        if (configData.name && configData.niche && configData.topic_prompt) {
+          isConfigReady = true;
+        }
+      } catch (e) {}
+
+      if (isConfigReady && configData) {
+        setProposedConfig(configData);
         setConfigReady(true);
         setMessages([...newMessages, { role: 'model', content: "I have gathered enough information! Please review the proposed channel configuration below." }]);
       } else {
-        setMessages([...newMessages, { role: 'model', content: data.message }]);
+        setMessages([...newMessages, { role: 'model', content: reply }]);
       }
       
     } catch (err: any) {
@@ -78,7 +170,6 @@ export default function NewChannelStrategy() {
       
       const channel_key = proposedConfig.name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
       
-      // Save directly to Firestore
       const channelRef = doc(db, 'channels', channel_key);
       await setDoc(channelRef, {
         user_id: uid,
@@ -97,7 +188,7 @@ export default function NewChannelStrategy() {
     }
   };
 
-  if (authLoading) return null;
+  if (authLoading || checkingKey) return null;
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-800 dark:text-neutral-200 p-8 font-sans selection:bg-emerald-500/30">
@@ -123,8 +214,6 @@ export default function NewChannelStrategy() {
             >
               <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
               <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-              <option value="gpt-4o">GPT-4o</option>
-              <option value="claude-3.5-sonnet">Claude 3.5 Sonnet</option>
             </select>
             
             <Link 
@@ -137,6 +226,41 @@ export default function NewChannelStrategy() {
           </div>
         </header>
 
+        {!isKeySet ? (
+          <div className="bg-white dark:bg-[#0a0a0a] rounded-2xl p-8 border border-black/10 dark:border-white/5 shadow-2xl max-w-lg mx-auto mt-12 text-center">
+            <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
+              <Key className="text-emerald-500" size={32} />
+            </div>
+            <h2 className="text-2xl font-semibold mb-2">Gemini API Key Required</h2>
+            <p className="text-sm text-neutral-500 mb-6">Since the dashboard is serverless, the AI runs directly in your browser. Please provide your Gemini API key to continue.</p>
+            
+            <form onSubmit={handleSetKey} className="space-y-4">
+              <input 
+                type="password" 
+                required
+                value={geminiKey}
+                onChange={e => setGeminiKey(e.target.value)}
+                placeholder="AIzaSy..." 
+                className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-3 text-neutral-900 dark:text-white focus:border-emerald-500/50 outline-none"
+              />
+              
+              <div className="flex gap-4 items-center justify-center text-sm">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" checked={saveToDb} onChange={() => setSaveToDb(true)} className="accent-emerald-500" />
+                  Save permanently to Database
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" checked={!saveToDb} onChange={() => setSaveToDb(false)} className="accent-emerald-500" />
+                  Local Storage (Browser only)
+                </label>
+              </div>
+
+              <button type="submit" className="w-full py-3 bg-emerald-500 text-black font-bold rounded-lg hover:bg-emerald-400 transition-colors">
+                Initialize Assistant
+              </button>
+            </form>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 gap-6">
           
           {/* Chat Window */}
@@ -271,6 +395,7 @@ export default function NewChannelStrategy() {
           )}
           
         </div>
+        )}
       </div>
     </div>
   );

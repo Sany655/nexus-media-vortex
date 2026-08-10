@@ -1,0 +1,13 @@
+{
+  "niche": "High-Ticket B2B Tech & SaaS",
+  "target_audience": "US/UK, 25-45 age group",
+  "topic_prompt": "Focus on: SaaS tool comparisons, AI workflow tutorials, wealth-building strategies, or secret B2B tech stacks. Avoid generic motivational quotes or saturated trivia. Make it sound like a 'secret strategy' or a 'tool review'. Example: 'The Secret AI Tool for SEO (Part 1)'",
+  "script_prompt": "You are writing a viral, high-converting B2B/SaaS YouTube Shorts script. Frame this as a workflow secret or tech review.",
+  "visual_prompt": "Visuals must be abstract, highly realistic stock footage keywords (e.g. 'person typing on laptop dark', 'glowing financial chart', 'server room').",
+  "metadata_prompt": "You are an elite B2B tech marketer and SEO expert.",
+  "cta_template": "🚀 Get the exact workflow here: [LINK IN BIO]",
+  "hashtags_template": "#b2bsaas #aiworkflow #productivity",
+  "tiktok_url": "https://www.tiktok.com/@neuronbuster4",
+  "youtube_url": "https://www.youtube.com/@neuronbuster4",
+  "instagram_url": "https://www.instagram.com/neuronbuster4/"
+}

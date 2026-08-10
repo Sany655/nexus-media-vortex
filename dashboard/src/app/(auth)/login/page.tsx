@@ -43,7 +43,7 @@ export default function LoginPage() {
           <Activity size={48} />
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-neutral-900 dark:text-white">
-          Sign in to Genesis
+          Sign in to Nexus Media Vortex
         </h2>
       </div>
 
