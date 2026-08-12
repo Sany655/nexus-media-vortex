@@ -1,6 +1,6 @@
 import sys
 import io
-# sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', write_through=True)
+
 # sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', write_through=True)
 
 import os
@@ -176,6 +176,76 @@ def process_trigger_queue(db):
                 db.check_and_update_all_analytics()
                 continue
             
+            # Handle manual publish from dashboard (Manual Review mode)
+            if job_type == 'PUBLISH_CONTENT':
+                topic = job.get('topic')
+                platform = job.get('platform')  # 'ig', 'yt', 'tk', 'fb', 'x', or None for all
+                print(f"\n📤 [DAEMON] Manual Publish Triggered for '{topic}' → {platform or 'all platforms'}")
+                try:
+                    # Find the video file
+                    import re
+                    safe_topic = re.sub(r'[^\w\s-]', '', topic).strip().replace(' ', '_')
+                    final_filepath = os.path.join(os.getcwd(), "assets", "final", f"{safe_topic}.mp4")
+                    
+                    if not os.path.exists(final_filepath):
+                        print(f"❌ [DAEMON] Video file not found for '{topic}'. Cannot publish.")
+                        continue
+                    
+                    # Get channel config for credentials
+                    ch = db.get_channel_config(channel_key)
+                    api_keys = json.loads(ch.get('api_keys_json', '{}')) if ch else {}
+                    
+                    # Get caption/hashtags from Firestore
+                    content_docs = db.db.collection('content_queue').where('topic', '==', topic).limit(1).stream()
+                    content_data = {}
+                    for cd in content_docs:
+                        content_data = cd.to_dict()
+                    
+                    caption = content_data.get('generated_caption', topic)
+                    hashtags = content_data.get('generated_hashtags', '')
+                    full_caption = f"{caption}\n\n{hashtags}" if hashtags else caption
+                    
+                    # Import uploader
+                    sys.path.insert(0, os.getcwd())
+                    from modules.uploader import DistributionNode
+                    uploader = DistributionNode(channel_id=channel_key)
+                    
+                    platforms_to_publish = [platform] if platform and platform != 'all' else ['ig', 'yt', 'tk']
+                    
+                    for pk in platforms_to_publish:
+                        if api_keys.get(f'pause_{pk}') or api_keys.get(f'disable_{pk}'):
+                            print(f"   ⏭️ Skipping {pk.upper()} (paused/disabled)")
+                            continue
+                        
+                        print(f"   📡 Publishing to {pk.upper()}...")
+                        if pk == 'ig':
+                            result = uploader.upload_to_instagram(final_filepath, full_caption, "")
+                            if result:
+                                db.mark_platform_uploaded(topic, 'ig')
+                                print(f"   ✅ Instagram done.")
+                        elif pk == 'yt':
+                            result = uploader.upload_to_youtube(final_filepath, topic, full_caption, private=False)
+                            if result:
+                                db.mark_platform_uploaded(topic, 'yt')
+                                print(f"   ✅ YouTube done.")
+                        elif pk == 'tk':
+                            result = uploader.upload_to_tiktok(final_filepath, full_caption)
+                            if result:
+                                db.mark_platform_uploaded(topic, 'tk')
+                                print(f"   ✅ TikTok done.")
+                    
+                    # Check if all done
+                    platform_state = db.db.collection('content_queue').where('topic', '==', topic).limit(1).stream()
+                    for ps in platform_state:
+                        d = ps.to_dict()
+                        if d.get('uploaded_ig') and d.get('uploaded_yt') and d.get('uploaded_tk'):
+                            ps.reference.update({'status': 'Uploaded'})
+                            print(f"   🎉 '{topic}' fully published!")
+                            
+                except Exception as e:
+                    print(f"❌ [DAEMON] Publish Error for '{topic}': {e}")
+                continue
+            
             if retry_topic:
                 with open("override.json", "w") as f:
                     json.dump({"retryTopic": retry_topic}, f)
@@ -185,6 +255,7 @@ def process_trigger_queue(db):
             trigger_engine(db, channel_key, "video")
     except Exception as e:
         print(f"Queue Error: {e}")
+
 
 def check_schedules(db):
     schedules = db.get_active_schedules()

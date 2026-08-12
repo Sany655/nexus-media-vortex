@@ -1,191 +1,106 @@
-# 🎬 AutoShorts AI: The Automated Faceless Video Generator
+# 🎬 Nexus Media Vortex: The Automated AI Creator Studio
 
-**AutoShorts AI** is a fully automated Python pipeline that creates viral-style "Faceless" YouTube Shorts and TikToks from a single topic. It handles the entire production chain: researching, scriptwriting, voiceover generation, stock footage sourcing, and advanced video editing with transitions and avatar injection.
+**Nexus Media Vortex** is a modern, fully automated production studio that orchestrates content generation across multiple platforms (YouTube, Instagram, TikTok, Facebook, X). It operates on a **"Frontend-First, Server-Enhanced"** architecture using a Next.js real-time Dashboard, Google Gemini AI, and an always-on Python Daemon.
 
 ---
 
 ## ✨ Key Features
 
-- **🧠 Intelligent Scriptwriting:** Uses **Google Gemini 2.0 Flash** to write engaging, "Edutainment" style scripts (Vox/Kurzgesagt style) with strict storytelling structures (Hook → Context → Mechanism → Twist).
-- **🗣️ Human-Like Voiceovers:** Integrated with **Suno Bark** (via Google Colab/Ngrok) for high-quality, expressive AI narration. Includes "Influencer Mode" for dynamic intonation.
-- **🎞️ Dual-Visual System:** Automatically searches and downloads **two distinct stock videos** per scene from **Pexels**, creating a dynamic "A/B Split" visual style to maximize viewer retention.
-- **✂️ Advanced FFmpeg Editing:**
-- **Smart Trimming:** Syncs video perfectly to audio duration.
-- **A/B Splitting:** Cuts every scene in half, switching visuals mid-sentence.
-- **Pro Transitions:** Randomly applies `xfade` (fade, slide, wipes) between scenes.
-- **Silence Removal:** Automatically trims dead air from AI voice generation.
-
-- **🤖 Random Avatar Injection:** Automatically inserts a custom "Avatar/Mascot" video into a random middle scene to build channel brand identity.
-- **🪟 Windows Ready:** Includes specific FFmpeg flags (`yuv420p`, `faststart`) to prevent corruption errors (`0x80004005`) on Windows Media Player.
+- **🧠 Dual-Brain AI Generation:**
+  - **Browser Brain:** Instantly generates text posts (X, Facebook) and image captions directly in your browser using Gemini, completely decoupled from the server.
+  - **Server Brain:** Synthesizes voiceovers, downloads assets, and edits full Faceless videos (Shorts/Long-form) via FFmpeg in the background.
+- **⚡ Real-Time Cloud Sync:** 100% powered by Firebase Firestore. No local SQLite. Changes in the dashboard or daemon update instantly across all your devices via `onSnapshot` listeners.
+- **🛠️ Pipeline Modes:**
+  - **Autonomous:** Generates and auto-publishes content directly to your connected channels based on cron schedules.
+  - **Manual Review:** Generates content and pauses. You review the script/video in the Dashboard, copy hashtags, and manually hit "Publish".
+- **⏰ Missed Schedule Recovery:** If your PC is off and misses a scheduled generation, the dashboard alerts you instantly upon login, allowing you to generate the missed content with one click.
+- **✂️ Advanced Video Editor:** FFmpeg-based composer that uses A/B scene splitting, pro-transitions (`xfade`), silence trimming, and random avatar injection to keep viewers hooked.
 
 ---
 
-## 📂 Project Structure
+## 📂 Project Architecture
 
 ```text
-Automated-YT-Shorts-AI/
+nexus-media-vortex/
 │
-├── assets/                  # Stores all media files
-│   ├── audio_clips/         # Generated voiceovers (.wav)
-│   ├── video_clips/         # Downloaded stock footage (.mp4)
-│   ├── temp/                # Intermediate processing files
-│   ├── final/               # 🏆 The Final Output Video lives here
-│   └── avatar/              # ⚠️ PUT YOUR AVATAR VIDEO HERE
-│       └── Professional_Girl_Animation_Video_Generation.mp4
+├── dashboard/               # 🖥️ The Next.js 15 UI (Control Center)
+│   ├── src/app/             # Real-time dashboard, settings, review panel
+│   ├── src/lib/             # firebase.ts, frontendBrain.ts (In-Browser Gemini)
+│   └── package.json         # React/Next.js dependencies
 │
-├── modules/                 # Core Logic Modules
-│   ├── brain.py             # AI Scriptwriter (Gemini)
-│   ├── audio.py             # Voice Generator (Bark Client)
-│   ├── asset_manager.py     # Pexels Downloader (Dual-Visual logic)
-│   └── composer.py          # FFmpeg Video Editor (Stitching & Transitions)
+├── engine/                  # ⚙️ The Python Backend (Heavy Lifter)
+│   ├── nexus_daemon.py      # Always-on orchestrator (listens to Firestore)
+│   ├── main.py              # The Video Genesis engine (Script -> Audio -> FFmpeg)
+│   ├── modules/             # Downloader, Composer, Firebase DB logic
+│   └── assets/              # Where generated videos are saved
 │
-├── main.py                  # Entry point (Orchestrator)
-├── test_audio.py            # Diagnostic tool for Bark connection
-└── requirements.txt         # Python dependencies
-
+├── pipeline_architecture.md # Detailed system workflow document
+└── README.md                # This file
 ```
 
 ---
 
 ## 🛠️ Prerequisites
 
-1. **Python 3.10+** installed.
-2. **FFmpeg** installed and added to your system PATH.
-
-- _Windows:_ `winget install ffmpeg` (or download from [ffmpeg.org](https://ffmpeg.org/download.html)).
-- _Verify:_ Type `ffmpeg -version` in your terminal.
-
-3. **API Keys:**
-
-- **Google Gemini API Key** (Free tier available).
-- **Pexels API Key** (Free).
-- **Ngrok Auth Token** (If running Bark on Colab).
+1. **Node.js (v18+)** - Required for the Next.js Dashboard.
+2. **Python 3.10+** - Required for the Daemon.
+3. **FFmpeg** - Must be installed and added to your system PATH for video rendering.
+4. **Firebase Account** - A Firebase project with Firestore enabled.
+5. **API Keys:**
+   - Google Gemini API Key
+   - Pexels API Key (for stock footage)
+   - AssemblyAI / Bark (for voiceover generation)
 
 ---
 
-## 🚀 Installation
+## 🚀 Setup & Installation
 
-### 1. Clone the Repository
+### 1. Setup the Cloud (Firebase)
+1. Create a Firebase project and enable Firestore.
+2. Update `dashboard/.env.local` with your Firebase client config.
+3. Place your `firebase_credentials.json` (Service Account Key) inside the `engine/` folder for the Python daemon.
 
+### 2. Start the Dashboard (Frontend)
 ```bash
-git clone https://github.com/yourusername/AutoShorts-AI.git
-cd AutoShorts-AI
-
+cd dashboard
+npm install
+npm run dev
 ```
+Navigate to `http://localhost:3000` to access the Control Center.
 
-### 2. Install Dependencies
-
+### 3. Start the Engine (Backend)
+The Python Daemon needs to run in the background to handle video rendering and auto-publishing.
 ```bash
+cd engine
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
-
+python nexus_daemon.py
 ```
-
-_(If `requirements.txt` is missing, install manually: `pip install google-generativeai requests ffmpeg-python mutagen colorama`)_
-
-### 3. Environment Setup
-
-Create the required folders and add your avatar:
-
-1. Create folder: `assets/avatar`
-2. Place your avatar video inside and name it: `Professional_Girl_Animation_Video_Generation.mp4`
-
-### 4. Configure API Keys
-
-You can set them in your environment variables or hardcode them (temporarily) in the modules:
-
-- `modules/brain.py` → `genai.configure(api_key="YOUR_GEMINI_KEY")`
-- `modules/asset_manager.py` → `self.api_key = "YOUR_PEXELS_KEY"`
-- `modules/audio.py` → Update `raw_url` with your active Ngrok/Colab link.
+*(Windows Users: The system includes a `start_daemon_hidden.vbs` script that can be added to your Windows Startup folder to boot the engine silently when you turn on your PC.)*
 
 ---
 
-## 🎮 How to Run
+## 🎮 Operational Workflows
 
-### Step 1: Start the Audio Server (Bark)
+### Generating Text & Image Posts
+When you request a text or image post via the Dashboard, the **Frontend Brain** takes over. It talks directly to Gemini via your browser, creates the content, and pushes it to Firestore as "Ready for Review". The Python server doesn't even need to be running!
 
-Since Bark requires a GPU, we run it on Google Colab.
-
-1. Open the **Colab Notebook** provided for this project.
-2. Paste your Ngrok Token.
-3. Run the cell.
-4. Copy the `https://xxxx.ngrok-free.app` URL.
-5. Paste this URL into `modules/audio.py` inside the `AudioEngine` class.
-
-### Step 2: Test Connection (Optional)
-
-Run the test script to ensure your local machine can talk to the Cloud GPU.
-
-```bash
-python test_audio.py
-
-```
-
-_If you see `✅ SUCCESS`, you are ready._
-
-### Step 3: Generate Video
-
-Run the main script:
-
-```bash
-python main.py
-
-```
-
-1. Enter a topic (e.g., _"The Mystery of the Pyramids"_).
-2. Wait for the AI to write the script, generate audio, download stock footage, and edit the video.
-3. The final video will be saved in `assets/final/final_short.mp4`.
-
----
-
-## 🧩 Module Breakdown
-
-### `brain.py` ( The Writer)
-
-- **Input:** Topic string.
-- **Logic:** Prompts Gemini to create an 8-9 scene JSON script. It asks for **two** visual keywords per scene (`visual_1`, `visual_2`) to enable the A/B split effect.
-
-### `audio.py` (The Voice)
-
-- **Input:** Text script.
-- **Logic:** Sends text to the Colab server. Includes a "Confidence" setting (`text_temp=0.7`) to make the voice sound like an influencer.
-- **Post-Processing:** Uses FFmpeg to trim silence and boost volume (2x).
-
-### `asset_manager.py` (The Librarian)
-
-- **Input:** Visual keywords.
-- **Logic:** Searches Pexels for **Portrait (9:16)** videos. Downloads pairs of videos for every scene. Handles fallbacks (if Video B is missing, reuse Video A).
-
-### `composer.py` (The Editor)
-
-- **Input:** Audio files + Video files.
-- **Logic:**
-- **Scene Processing:** Cuts the scene duration in half. Plays Video A for the first half, Video B for the second half.
-- **Avatar Injection:** Identifies a random "middle" scene (not hook/outro) and replaces the stock footage with your Avatar loop.
-- **Stitching:** Merges all scenes using `xfade` transitions (wipes, slides).
-- **Rendering:** Exports as `yuv420p` H.264 MP4 with `faststart` flags for maximum compatibility.
+### Generating Videos
+When a video is queued (manually or via schedule), the **Nexus Daemon** spots the request in Firestore. It runs `main.py` in the background to fetch assets and composite the video. 
+- If your channel is set to **Autonomous**, it uploads the video immediately.
+- If set to **Manual Review**, it saves the `.mp4` and flags the UI. You can watch the video, tweak the caption, and hit "Publish" straight from the dashboard.
 
 ---
 
 ## ⚠️ Troubleshooting
 
-**Q: The video is black or corrupt (0x80004005 error).**
+**Q: The Engine didn't auto-start on Windows boot.**
+- **Fix:** Ensure the shortcut in `Win+R -> shell:startup` points to `engine/start_daemon_hidden.vbs` and that the VBS script correctly targets the `engine/start_daemon.bat` file.
 
-- **Fix:** This is usually a Windows codec issue. The updated `composer.py` forces `pix_fmt='yuv420p'`. Try opening the file with VLC Media Player.
+**Q: Video fails with `0x80004005` error on Windows Media Player.**
+- **Fix:** FFmpeg handles this automatically by forcing `pix_fmt='yuv420p'` in the composer. If you still encounter issues, try playing the output file in VLC Media Player.
 
-**Q: "Avatar file missing" error.**
+**Q: Dashboard shows "Missed Scheduled Generation".**
+- **Fix:** This happens if your PC was off during a scheduled cron tick. Click "Generate Now" in the dashboard banner to instantly fire the missed job.
 
-- **Fix:** Altough not needed, Ensure your folder structure is exactly `assets/avatar/avatar.mp4`.
-
-**Q: The audio is silent or fails.**
-
-- **Fix:** Your Ngrok tunnel likely expired. Restart the Colab cell and update the URL in `audio.py`.
-
-**Q: FFmpeg error "Exec format error" or "not found".**
-
-- **Fix:** Ensure FFmpeg is installed and accessible from your command line.
-
----
-
-## 📜 License
-
-This project is open-source. Feel free to modify and build your own automation empire!

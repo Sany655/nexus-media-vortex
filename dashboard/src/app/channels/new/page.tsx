@@ -179,8 +179,7 @@ export default function NewChannelStrategy() {
         created_at: new Date().toISOString()
       });
       
-      alert(`Channel '${proposedConfig.name}' created successfully!`);
-      router.push('/');
+      router.push(`/channels/settings?id=${channel_key}`);
     } catch (err: any) {
       alert("Error saving channel: " + err.message);
     } finally {

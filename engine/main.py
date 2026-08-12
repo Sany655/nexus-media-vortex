@@ -86,16 +86,39 @@ async def main():
     private_mode = args.private.lower() == "true"
     channel_id = args.channel
     content_type = args.type
+    pipeline_mode = "autonomous"  # default
 
-    # Shadowban Override Check
-    config_path = os.path.join(os.getcwd(), 'channels', channel_id, 'config.json')
-    if os.path.exists(config_path):
-        import json
-        with open(config_path, "r") as f:
-            cfg = json.load(f)
-            if cfg.get("pause_ig") or cfg.get("disable_ig"): upload_ig = False
-            if cfg.get("pause_yt") or cfg.get("disable_yt"): upload_yt = False
-            if cfg.get("pause_tk") or cfg.get("disable_tk"): upload_tk = False
+    # Load channel config from Firebase to get pipeline_mode and platform settings
+    try:
+        from modules.firebase_db import FirebaseDBManager
+        fdb = FirebaseDBManager()
+        ch_config = fdb.get_channel_config(channel_id)
+        if ch_config:
+            api_keys = json.loads(ch_config.get('api_keys_json', '{}'))
+            pipeline_mode = api_keys.get('pipeline_mode', 'autonomous')
+            if api_keys.get("pause_ig") or api_keys.get("disable_ig"): upload_ig = False
+            if api_keys.get("pause_yt") or api_keys.get("disable_yt"): upload_yt = False
+            if api_keys.get("pause_tk") or api_keys.get("disable_tk"): upload_tk = False
+            # Check content-type platform permissions
+            ig_types = api_keys.get('ig_content_types', ['short', 'image'])
+            yt_types = api_keys.get('yt_content_types', ['short', 'video'])
+            tk_types = api_keys.get('tk_content_types', ['short'])
+            if content_type not in ig_types: upload_ig = False
+            if content_type not in yt_types: upload_yt = False
+            if content_type not in tk_types: upload_tk = False
+    except Exception as e:
+        print(f"⚠️ Could not load Firebase channel config: {e}. Using defaults.")
+        # Fallback: check local config file
+        config_path = os.path.join(os.getcwd(), 'channels', channel_id, 'config.json')
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                cfg = json.load(f)
+                pipeline_mode = cfg.get('pipeline_mode', 'autonomous')
+                if cfg.get("pause_ig") or cfg.get("disable_ig"): upload_ig = False
+                if cfg.get("pause_yt") or cfg.get("disable_yt"): upload_yt = False
+                if cfg.get("pause_tk") or cfg.get("disable_tk"): upload_tk = False
+
+    print(f"📋 PIPELINE MODE: {pipeline_mode.upper()}")
 
     # Start log trace
     print("\n" + "="*50)
@@ -346,6 +369,37 @@ async def main():
         # CHANGED: Now using the transition function instead of simple concat
         composer.concatenate_with_transitions(final_scene_paths, final_filename)
         clean_cache()
+
+        # Check pipeline mode — if manual_review, save to Firebase and stop before uploading
+        if pipeline_mode == "manual_review":
+            print(f"\n🔍 PIPELINE MODE: Manual Review — Skipping upload for '{topic}'.")
+            print(f"   Content is ready. User will publish from the dashboard.")
+            # Save to Firebase as 'Ready for Review'
+            try:
+                from modules.firebase_db import FirebaseDBManager
+                fdb = FirebaseDBManager()
+                metadata = brain.generate_metadata(None, topic)
+                caption = f"{metadata.get('caption', topic)}"
+                hashtags = metadata.get('hashtags', '')
+                fdb.log_generated_video(channel_id, topic, content_type)
+                fdb.update_script_and_metadata(topic, str(script), caption)
+                # Mark as Ready for Review in Firestore
+                docs_ref = fdb.db.collection('content_queue').where('topic', '==', topic).limit(1).stream()
+                for doc_ref in docs_ref:
+                    doc_ref.reference.update({
+                        'status': 'Ready for Review',
+                        'generated_caption': caption,
+                        'generated_hashtags': hashtags,
+                        'pipeline_mode': 'manual_review',
+                        'video_filename': final_filename,
+                    })
+            except Exception as e:
+                print(f"⚠️ Could not update Firestore for review mode: {e}")
+            db.update_status(topic, 'Ready for Review') if hasattr(db, 'update_status') else None
+            print("="*50)
+            print(f"✅ '{topic}' is ready for review in the dashboard.")
+            print("="*50)
+            return
 
         # 6. DISTRIBUTION NODE & ENGAGEMENT NODE: Auto-Upload
         print(f"\n🚀 Phase 6: Distributing and Engaging {final_filename}...")

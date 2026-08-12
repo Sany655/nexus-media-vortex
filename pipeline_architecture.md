@@ -1,98 +1,121 @@
 # Nexus Media Vortex: Cloud Pipeline Architecture
 
-This document breaks down the complete, end-to-end flow of your newly cloud-connected Nexus Media Vortex system. It traces exactly how a simple click on the Dashboard UI travels through the cloud to automatically generate and upload a video.
+This document breaks down the end-to-end flow of the Nexus Media Vortex system, outlining how the Next.js Dashboard and the Python Daemon coordinate via Firebase Firestore to handle autonomous and manual content generation across platforms.
 
 ---
 
-## 1. The High-Level Flow
+## 1. The High-Level Architecture
+
+The system operates using a **"Frontend-First, Server-Enhanced"** architecture. It consists of two active layers connected through a real-time Firestore database.
 
 ```mermaid
 flowchart TD
-    %% Triggers
-    T1(["⏰ Scheduled Time Reached"]) --> D
-    T2(["🖱️ Manual Override (UI)"]) --> D
-
-    %% Daemon Hub
-    D{"Nexus Daemon\n(Always Running)"} --> A
-
-    %% Pre-Generation Phase
-    subgraph Pre-Generation
-        A["📊 Analytics Sync\n(Fetches latest views)"] --> B
-        B["🧠 AI Strategy Brain\n(Analyzes views & trends)"] --> C{Pivot Strategy?}
-        C -- "Yes" --> P1["Update Prompts & Schedule"] --> E
-        C -- "No" --> E["🚀 Spawn Genesis Engine\n(Background Process)"]
+    %% Users and Inputs
+    U(["👤 User (Browser)"]) --> DB_UI
+    
+    %% Dashboard (Frontend)
+    subgraph Dashboard (Next.js)
+        DB_UI["🖥️ Dashboard UI"]
+        FB["🧠 Frontend Brain\n(Gemini API)"]
+        DB_UI <--> FB
     end
-
-    %% Engine Phase
-    subgraph Genesis Engine (main.py)
-        E --> G1["📝 Generate Script\n(Using AI Prompts)"]
-        G1 --> G2["🎙️ Synthesize Audio\n(Edge TTS)"]
-        G2 --> G3["🎬 Download Assets\n(Stock Footage/Images)"]
-        G3 --> G4["🎞️ Render Final Video\n(Merge Audio + Visuals)"]
+    
+    %% Firestore
+    subgraph Cloud (Firebase)
+        FS_Q["📝 content_queue"]
+        FS_T["⚡ trigger_queue"]
+        FS_S["📅 schedules"]
+        FS_C["📺 channels"]
     end
-
-    %% Distribution Phase
-    subgraph Distribution
-        G4 --> U{Upload Platforms}
-        U --> U1["📺 Upload to YouTube"]
-        U --> U2["📸 Upload to Instagram\n(Uses saved session)"]
-        U --> U3["🎵 Upload to TikTok\n(Uses browser cookies)"]
+    
+    %% Frontend to Cloud
+    FB -- "Text/Image Content" --> FS_Q
+    DB_UI -- "Generate/Publish Requests" --> FS_T
+    DB_UI <--> FS_S & FS_C
+    
+    %% Engine (Backend)
+    subgraph Engine (Python Daemon)
+        D{"Nexus Daemon"}
+        SB["🧠 Strategy Brain"]
+        V["🎬 Video Composer\n(FFmpeg)"]
+        UP["📤 Uploader Node"]
+        
+        D <--> SB
+        D --> V --> UP
     end
-
-    %% Post-Generation Phase
-    U1 & U2 & U3 --> S1["💾 Save IDs to Firebase\n(yt_id, ig_id)"]
-    S1 --> F(["🎉 Pipeline Complete\n(Awaits next trigger)"])
-
-    %% Styling
-    style D fill:#f9f,stroke:#333,stroke-width:2px
-    style E fill:#bbf,stroke:#333,stroke-width:2px
-    style F fill:#bfb,stroke:#333,stroke-width:2px
+    
+    %% Cloud to Backend
+    FS_T --> D
+    FS_S --> D
+    D -- "Ready for Review / Uploaded" --> FS_Q
 ```
 
 ---
 
-## 2. Component Breakdown
+## 2. Core Operational Modes
 
-### A. Next.js Dashboard UI (The Control Center)
-Your UI is now **100% decoupled** from the local SQLite database. It communicates strictly with Firebase via your `/api/` routes using the `firebase-admin` SDK.
+Each channel can operate in one of two **Pipeline Modes** defined in settings:
 
-*   **Channels (`api/channels`)**: Saves API keys, AI prompts, and toggle states (e.g., `pause_yt`) to the `channels` collection.
-*   **Schedules (`api/schedules`)**: When you set a time in the UI, it converts it to a standard CRON expression (e.g., `0 18 * * *`) and saves it to the `schedules` collection.
-*   **Manual Trigger (`api/pipeline/generate`)**: Clicking the Manual Override button drops a `Pending` job into the `trigger_queue` collection.
+### A. Autonomous Mode
+- The system handles the entire lifecycle end-to-end.
+- Topics are generated, scripts are written, videos are rendered, and they are automatically uploaded to platforms like YouTube, Instagram, and TikTok without user intervention.
+- The Engine reads the channel's `schedules` collection and triggers automatically.
 
-### B. The Nexus Daemon (`nexus_daemon.py`)
-This is the always-running heart of the automation. It runs an infinite `while True:` loop, sleeping for 60 seconds between ticks.
-
-1.  **Polls Firebase**: It checks `get_active_schedules()` and `trigger_queue`.
-2.  **Analytics Sync**: Before generating a video, it calls `analytics.py`, which looks at the `yt_id`, `ig_id`, and `tk_id` fields in Firebase to pull the latest view counts and update your dashboard.
-3.  **Strategy Brain**: It passes the analytics to the AI `strategy_brain.py`. The AI analyzes the data and can dynamically update your prompts, shadowban cooldowns, and even the schedule itself.
-4.  **Engine Launch**: Once the setup is complete, it executes `subprocess.Popen(["run_genesis.bat", ...])`. By doing this, it throws the heavy video generation into a background process, allowing the Daemon to go back to sleep and monitor other channels.
-
-### C. The Genesis Engine (`run_genesis.bat` & `main.py`)
-This is the heavy lifter. Because it is launched in the background by the Daemon, all of its print statements are piped directly into `engine.log`. 
-
-1.  **Preparation**: `main.py` fetches the pending topic from Firebase's `content_queue`.
-2.  **Generation**: It uses the AI prompts to generate the script, synthesizes the audio via TTS, downloads stock footage, and compiles the final `.mp4` file.
-3.  **Distribution**: It connects to YouTube, Instagram, and TikTok via `modules/uploader.py`.
-4.  **Completion**: Upon successful upload, it saves the new `yt_id`, `ig_id`, and `tk_id` back to Firebase so the analytics script can track them tomorrow!
+### B. Manual Review Mode
+- The system handles generation and rendering but **stops before uploading**.
+- Content is saved to Firestore with the status `Ready for Review`.
+- The user logs into the dashboard, reviews the script, caption, and hashtags, and manually initiates the upload process using the **Publish** buttons.
 
 ---
 
-## 3. The Firebase Database Structure
+## 3. The Dual-Brain System
 
-Your cloud database acts as the single source of truth connecting the UI and the Python engine. 
+To account for periods when the local PC/Server running the Daemon might be offline, the system utilizes a **Dual-Brain approach**.
+
+### The Frontend Brain (Browser-Side)
+- Located in `src/lib/frontendBrain.ts`.
+- Executes directly in the user's browser using the Gemini API.
+- Capable of instantly generating text posts (X, LinkedIn, Facebook) and image posts (Instagram, Pinterest).
+- Since these formats do not require heavy video compositing, they are instantly added to the `content_queue` as `Ready for Review`, allowing the user to copy/paste them directly without needing the Python daemon to be online.
+
+### The Backend Brain & Engine (Server-Side)
+- Located in the `engine/` directory (`main.py`, `nexus_daemon.py`).
+- Required for heavy video tasks (Audio synthesis, asset downloading, FFmpeg video compositing).
+- The Daemon continuously listens to `trigger_queue` for manual video generation requests or runs autonomously via scheduled cron jobs.
+- If a scheduled generation is missed because the PC was off, the Dashboard detects the missed schedule and presents an alert, allowing the user to manually queue or generate it instantly.
+
+---
+
+## 4. The Database Schema (Firestore)
+
+The system relies 100% on Firebase Firestore (SQLite has been fully removed) ensuring total synchronization across multiple devices. Data is isolated by `user_id` for multi-tenant security.
 
 | Collection | Purpose | Key Fields |
 | :--- | :--- | :--- |
-| `channels` | Channel configuration and API keys | `channel_key`, `api_keys_json`, `topic_prompt`, `script_prompt` |
-| `schedules` | Automated triggering | `cron_expression`, `next_run`, `last_run`, `is_active` |
-| `content_queue` | Video generation history and analytics | `topic`, `status`, `yt_id`, `ig_id`, `tk_id`, `youtube_views`, `ig_views`, `tk_views`, `script` |
-| `trigger_queue` | Manual overrides | `status`, `channel_key`, `created_at` |
-| `users` | Admin authentication | `uid`, `email` |
+| `users` | Admin authentication and user-level config | `uid`, `email`, `gemini_api_key` |
+| `channels` | Channel settings, prompts, and platform limits | `channel_key`, `user_id`, `api_keys_json`, `topic_prompt`, `script_prompt` |
+| `schedules` | Automated cron triggers per channel | `channel_key`, `user_id`, `cron_expression`, `next_run`, `content_type` |
+| `content_queue` | Content history, analytics, and pending reviews | `topic`, `user_id`, `status`, `pipeline_mode`, `generated_caption`, `uploaded_ig`, `youtube_views` |
+| `trigger_queue` | Real-time command bus | `type` (e.g. `PUBLISH_CONTENT`, `GENERATE_PIPELINE`), `status`, `channel_key`, `platform` |
 
-> [!TIP]
-> **How to Verify the System is Running**
-> 1. Set a schedule time in the UI for 2 minutes from now.
-> 2. Ensure `python .\nexus_daemon.py` is running in your terminal.
-> 3. Watch the terminal. When the time hits, you will see `🚀 [DAEMON] Initiating Engine Pipeline`.
-> 4. To see the actual video generation progress, open a second terminal and run `Get-Content engine.log -Wait -Tail 20`. This will stream the background process logs live to your screen!
+---
+
+## 5. End-to-End Workflows
+
+### Text/Image Generation (Frontend)
+1. User clicks **"Generate Now"** in the UI.
+2. The `Frontend Brain` queries Firestore to ensure no recent topics are duplicated.
+3. The browser securely calls Gemini to generate the content, caption, and hashtags.
+4. The document is saved directly into `content_queue`.
+5. The UI updates instantly via `onSnapshot` real-time listeners. User copies the content and clicks the platform link to manually post.
+
+### Video Generation (Engine)
+1. User clicks **"Queue Server"** or the cron schedule triggers automatically.
+2. The `Nexus Daemon` spots the event in `trigger_queue` or `schedules`.
+3. The Daemon launches the `run_genesis.bat` script which runs `main.py` in the background.
+4. The Engine generates the script via Gemini, fetches assets, synthesizes audio, and stitches the video using FFmpeg.
+5. Depending on the `pipeline_mode`, it either:
+   - **Uploads** the video immediately and sets status to `Uploaded`.
+   - **Skips upload**, setting status to `Ready for Review` so the user can review it in the Dashboard.
+6. The user can click a specific platform's **Publish** button in the UI, dropping a `PUBLISH_CONTENT` job into the `trigger_queue` which the Daemon instantly executes to upload the specific video file.
+
