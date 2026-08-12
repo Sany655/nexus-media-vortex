@@ -222,6 +222,8 @@ function SettingsComponent() {
     fb_content_types: ['short', 'post'],
     x_content_types: ['post'],
     pipeline_mode: 'autonomous',
+    gemini_api_key: '',
+    pexels_api_key: '',
   });
 
   useEffect(() => {
@@ -382,6 +384,57 @@ function SettingsComponent() {
               ℹ️ In Manual Review mode, the daemon will generate and render video but will NOT upload. Content will appear in the Pipeline History with copy/publish controls for each platform.
             </div>
           )}
+        </div>
+
+        {/* API Keys */}
+        <div className="bg-white dark:bg-[#0a0a0a] rounded-2xl p-6 border border-black/10 dark:border-white/5 shadow-xl">
+          <h2 className="text-base font-semibold mb-1 flex items-center gap-2">
+            <Settings size={18} className="text-emerald-500" />
+            API Integrations & Keys
+          </h2>
+          <p className="text-xs text-neutral-500 mb-5">
+            Nexus requires third-party API keys to operate automatically in the background. Your keys are securely stored in your isolated database.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Gemini API Key */}
+            <div className="space-y-2">
+              <label className="block text-xs uppercase text-neutral-500 font-bold tracking-wider">Gemini API Key</label>
+              <input
+                type="password"
+                value={config.gemini_api_key || ''}
+                onChange={e => updateConfig('gemini_api_key', e.target.value)}
+                placeholder="AIzaSy..."
+                className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+              />
+              <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Nexus Usage Tracker</span>
+                <div className="text-right">
+                  <p className="text-[10px] text-neutral-500">Free Tier Limit</p>
+                  <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400">15 RPM / 1M TPM</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Pexels API Key */}
+            <div className="space-y-2">
+              <label className="block text-xs uppercase text-neutral-500 font-bold tracking-wider">Pexels API Key</label>
+              <input
+                type="password"
+                value={config.pexels_api_key || ''}
+                onChange={e => updateConfig('pexels_api_key', e.target.value)}
+                placeholder="563492ad6f91700001000001..."
+                className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+              />
+              <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Nexus Usage Tracker</span>
+                <div className="text-right">
+                  <p className="text-[10px] text-neutral-500">Free Tier Limit</p>
+                  <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400">200 / hour</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Platform Cards */}

@@ -65,14 +65,6 @@ export default function NewChannelStrategy() {
     if (authLoading || !user) return;
     
     const loadKey = async () => {
-      // Check local storage first
-      const localKey = localStorage.getItem('GEMINI_API_KEY');
-      if (localKey) {
-        setGeminiKey(localKey);
-        setIsKeySet(true);
-        setCheckingKey(false);
-        return;
-      }
 
       // Check DB
       try {
@@ -94,10 +86,8 @@ export default function NewChannelStrategy() {
     e.preventDefault();
     if (!geminiKey) return;
     
-    if (saveToDb && user) {
+    if (user) {
       await setDoc(doc(db, 'users', user.uid), { gemini_api_key: geminiKey }, { merge: true });
-    } else {
-      localStorage.setItem('GEMINI_API_KEY', geminiKey);
     }
     setIsKeySet(true);
   };

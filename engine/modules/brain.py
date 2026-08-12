@@ -39,9 +39,12 @@ class ContentBrain:
             
         # Override Gemini API key if present in DB
         custom_gemini_key = self.api_keys.get('gemini_api_key')
+        
         if custom_gemini_key:
             global client
             client = genai.Client(api_key=custom_gemini_key)
+        elif not api_key:
+            raise ValueError("CRITICAL ERROR: Missing Gemini API Key. Please add it to your channel settings.")
 
     def get_trending_topic(self):
         """

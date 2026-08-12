@@ -3,9 +3,11 @@ import requests
 import random
 
 class AssetManager:
-    def __init__(self):
-        # Your original API Key
-        self.api_key = "hZBjjYowDAauyvn9rioK5qYMHFdCq11rKnmWo4OQlXhZspsVuo2DkpCP"
+    def __init__(self, api_key=None):
+        if not api_key:
+            raise ValueError("CRITICAL ERROR: Missing Pexels API Key. Please add it to your channel settings.")
+        
+        self.api_key = api_key
         self.base_url = "https://api.pexels.com/videos/search"
         self.headers = {
             "Authorization": self.api_key

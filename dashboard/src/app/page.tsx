@@ -268,6 +268,11 @@ export default function Dashboard() {
 
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [retryingTopic, setRetryingTopic] = useState<string | null>(null);
+  
+  // API Keys Modal State
+  const [tempGeminiKey, setTempGeminiKey] = useState('');
+  const [tempPexelsKey, setTempPexelsKey] = useState('');
+  const [savingKeys, setSavingKeys] = useState(false);
 
   // Missed schedule generation modal
   const [missedScheduleId, setMissedScheduleId] = useState<string | null>(null);
@@ -288,20 +293,15 @@ export default function Dashboard() {
     try { return JSON.parse(currentChannelObj?.api_keys_json || '{}'); } catch { return {}; }
   })();
 
-  // Gemini API key — from user doc or localStorage
+  // Gemini API key — pull strictly from Firebase channel config
   const [geminiKey, setGeminiKey] = useState('');
   useEffect(() => {
-    const localKey = localStorage.getItem('GEMINI_API_KEY');
-    if (localKey) { setGeminiKey(localKey); return; }
-    if (!user) return;
-    import('firebase/firestore').then(({ doc: fdoc, getDoc }) => {
-      getDoc(fdoc(db, 'users', user.uid)).then(snap => {
-        if (snap.exists() && snap.data().gemini_api_key) {
-          setGeminiKey(snap.data().gemini_api_key);
-        }
-      });
-    });
-  }, [user]);
+    if (channelConfig?.gemini_api_key) {
+      setGeminiKey(channelConfig.gemini_api_key);
+    } else {
+      setGeminiKey('');
+    }
+  }, [channelConfig]);
 
   // ----------- Fetch Channels -----------
   useEffect(() => {
@@ -548,6 +548,28 @@ export default function Dashboard() {
 
   // Is content type generatable in browser?
   const isClientGeneratable = contentType === 'post' || contentType === 'image';
+
+  // Check API keys
+  const hasMissingKeys = currentChannelObj && (!channelConfig.gemini_api_key || !channelConfig.pexels_api_key);
+
+  const saveApiKeys = async () => {
+    if (!tempGeminiKey || !tempPexelsKey) {
+      showToast('Both keys are required.', 'error');
+      return;
+    }
+    setSavingKeys(true);
+    try {
+      const updatedConfig = { ...channelConfig, gemini_api_key: tempGeminiKey, pexels_api_key: tempPexelsKey };
+      await updateDoc(doc(db, 'channels', channel), {
+        api_keys_json: JSON.stringify(updatedConfig)
+      });
+      showToast('API Keys saved securely!');
+    } catch (e: any) {
+      showToast('Error saving keys: ' + e.message, 'error');
+    } finally {
+      setSavingKeys(false);
+    }
+  };
 
   // Check for missed schedule
   const hasMissedSchedule = schedule && schedule.next_run && new Date(schedule.next_run) < new Date();
@@ -839,6 +861,9 @@ export default function Dashboard() {
                             }`}>
                               {log.status === 'TK_AUTH_SUSPENDED' ? '⚠️ TK COOKIES' : (log.status || 'Processing...')}
                             </span>
+                            {log.status?.toLowerCase().includes('fail') && log.error && (
+                              <p className="text-[10px] text-red-500/80 mt-1.5 leading-tight">{log.error}</p>
+                            )}
                           </td>
                           <td className="p-4 text-center">
                             {log.uploaded_ig
@@ -1062,6 +1087,52 @@ export default function Dashboard() {
                 {generating ? 'Generating...' : generationMode === 'frontend' ? 'Generate Now' : 'Queue for Server'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* API Keys Missing Modal */}
+      {hasMissingKeys && (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111111] border border-red-500/30 rounded-2xl p-6 shadow-2xl w-full max-w-md flex flex-col gap-4 animate-in fade-in zoom-in duration-300">
+            <div className="flex items-center gap-3 text-red-500 border-b border-red-500/20 pb-4">
+              <Settings size={24} />
+              <h2 className="text-lg font-bold">API Keys Required</h2>
+            </div>
+            
+            <p className="text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
+              Your channel is missing required API keys. Nexus cannot generate content or operate autonomously without them.
+            </p>
+
+            <div className="space-y-4 py-2">
+              <div className="space-y-1">
+                <label className="block text-xs uppercase text-neutral-500 font-bold tracking-wider">Gemini API Key</label>
+                <input
+                  type="password"
+                  value={tempGeminiKey}
+                  onChange={e => setTempGeminiKey(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-red-500/50"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs uppercase text-neutral-500 font-bold tracking-wider">Pexels API Key</label>
+                <input
+                  type="password"
+                  value={tempPexelsKey}
+                  onChange={e => setTempPexelsKey(e.target.value)}
+                  placeholder="563492ad6f..."
+                  className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-red-500/50"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={saveApiKeys}
+              disabled={savingKeys || !tempGeminiKey || !tempPexelsKey}
+              className="w-full py-3 rounded-lg text-sm font-bold bg-red-500 text-white hover:bg-red-400 disabled:opacity-50 transition-colors mt-2 shadow-[0_0_20px_rgba(239,68,68,0.3)]"
+            >
+              {savingKeys ? 'Saving Securely...' : 'Save Keys & Unlock'}
+            </button>
           </div>
         </div>
       )}

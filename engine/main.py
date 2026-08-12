@@ -135,6 +135,18 @@ async def main():
     # 0. DROPZONE SYNC
     db.sync_orphaned_files()
     
+    # Fetch Pexels API Key
+    pexels_api_key = None
+    try:
+        from modules.firebase_db import FirebaseDBManager
+        fdb = FirebaseDBManager()
+        ch_config = fdb.get_channel_config(channel_id)
+        if ch_config:
+            api_keys = json.loads(ch_config.get('api_keys_json', '{}'))
+            pexels_api_key = api_keys.get('pexels_api_key')
+    except Exception as e:
+        print(f"⚠️ Could not load Firebase channel config for keys: {e}")
+    
     # 0.5 GHOST STUDIO OVERRIDE CHECK
     custom_topic = None
     custom_script = None
@@ -314,61 +326,58 @@ async def main():
             db.log_generated_topic(topic, content_type)
         else:
             db.log_generated_topic(topic, content_type)
-    except Exception as e:
-        error_msg = str(e)
-        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg or "Quota exceeded" in error_msg:
-            print("❌ Brain Error: Gemini API Rate Limit Exceeded.")
-            print("   You have hit your free-tier quota (20 requests/day).")
-            print("   Please wait 24 hours before trying again, or upgrade your API billing plan.")
-        else:
-            print(f"❌ Brain Error: {e}")
-        return
-    
-    if not script:
-        print("❌ Script generation failed.")
-        return
+            
+        if not script:
+            raise ValueError("Script generation returned None or empty.")
 
-    # Early exit for non-video content types
-    if content_type in ["post", "image"]:
-        print(f"\n🚀 Phase 6: Distributing {content_type}...")
-        
-        # Save script and metadata to database
-        caption = script[0].get("text", "") if content_type == "post" else script[0].get("caption", "")
-        db.update_script_and_metadata(topic, str(script), caption)
-        
-        # Mark as uploaded since text/image uploaders aren't fully integrated yet
-        # Future: Implement Uploader for text and image
-        db.mark_platform_uploaded(topic, "ig")
-        db.mark_platform_uploaded(topic, "yt")
-        db.mark_platform_uploaded(topic, "tk")
-        db.mark_as_uploaded(topic)
-        print(f"🎉 Pipeline Complete! '{topic}' {content_type} is live (Simulated Upload).")
-        return
+        # Early exit for non-video content types
+        if content_type in ["post", "image"]:
+            print(f"\n🚀 Phase 6: Distributing {content_type}...")
+            caption = script[0].get("text", "") if content_type == "post" else script[0].get("caption", "")
+            db.update_script_and_metadata(topic, str(script), caption)
+            db.mark_platform_uploaded(topic, "ig")
+            db.mark_platform_uploaded(topic, "yt")
+            db.mark_platform_uploaded(topic, "tk")
+            db.mark_as_uploaded(topic)
+            print(f"🎉 Pipeline Complete! '{topic}' {content_type} is live (Simulated Upload).")
+            return
 
-    try:
         # 2. AUDIO: Generate Voice
         audio_engine = AudioEngine() 
         script = await audio_engine.process_script(script)
 
         # 3. ASSETS: Get Stock Video
-        asset_manager = AssetManager()
+        asset_manager = AssetManager(api_key=pexels_api_key)
         assets_map = asset_manager.get_videos(script)
 
         # 4. COMPOSER: Merge Video + Audio
         composer = Composer()
         final_scene_paths = composer.render_all_scenes(script, assets_map)
+        
+        # 5. STITCH WITH TRANSITIONS
+        if final_scene_paths:
+            import re
+            safe_topic = re.sub(r'[^\w\s-]', '', topic).strip().replace(' ', '_')
+            final_filename = f"{safe_topic}.mp4"
+            composer.concatenate_with_transitions(final_scene_paths, final_filename)
+            clean_cache()
+            
     except Exception as e:
-        print(f"🚨 PIPELINE CRASHED: {e}")
-        db.mark_as_failed(topic)
+        error_msg = str(e)
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg or "Quota exceeded" in error_msg:
+            print("❌ API Rate Limit Exceeded.")
+        else:
+            print(f"🚨 PIPELINE CRASHED: {e}")
+        
+        # Report crash to Database
+        try:
+            db.mark_as_failed(topic) if 'topic' in locals() else None
+            from modules.firebase_db import FirebaseDBManager
+            fdb = FirebaseDBManager()
+            fdb.mark_as_failed(topic if 'topic' in locals() else "Unknown Topic", f"Pipeline Crash: {error_msg}")
+        except:
+            pass
         return
-    # 5. STITCH WITH TRANSITIONS
-    if final_scene_paths:
-        import re
-        safe_topic = re.sub(r'[^\w\s-]', '', topic).strip().replace(' ', '_')
-        final_filename = f"{safe_topic}.mp4"
-        # CHANGED: Now using the transition function instead of simple concat
-        composer.concatenate_with_transitions(final_scene_paths, final_filename)
-        clean_cache()
 
         # Check pipeline mode — if manual_review, save to Firebase and stop before uploading
         if pipeline_mode == "manual_review":

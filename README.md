@@ -71,9 +71,9 @@ Navigate to `http://localhost:3000` to access the Control Center.
 ### 3. Start the Engine (Backend)
 The Python Daemon needs to run in the background to handle video rendering and auto-publishing.
 ```bash
-cd engine
 python -m venv venv
 venv\Scripts\activate
+cd engine
 pip install -r requirements.txt
 python nexus_daemon.py
 ```
