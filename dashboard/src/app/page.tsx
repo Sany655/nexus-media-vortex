@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -255,7 +255,7 @@ export default function Dashboard() {
   const [schedule, setSchedule] = useState<any>(null);
   const [brainState, setBrainState] = useState<any>(null);
 
-  const [contentType, setContentType] = useState('short');
+  
   const [scheduleTime, setScheduleTime] = useState('');
   const [pipelineMode, setPipelineMode] = useState<PipelineMode>('autonomous');
 
@@ -292,6 +292,19 @@ export default function Dashboard() {
   const channelConfig = (() => {
     try { return JSON.parse(currentChannelObj?.api_keys_json || '{}'); } catch { return {}; }
   })();
+
+  
+  const enabledTypes = useMemo(() => {
+    if (!channelConfig) return ['short'];
+    const types = new Set([
+      ...(channelConfig.ig_content_types || []),
+      ...(channelConfig.yt_content_types || []),
+      ...(channelConfig.tk_content_types || []),
+      ...(channelConfig.fb_content_types || []),
+      ...(channelConfig.x_content_types || []),
+    ]);
+    if (types.size === 0) return ['short'];
+  }, [channelConfig]);
 
   // Gemini API key — pull strictly from Firebase channel config
   const [geminiKey, setGeminiKey] = useState('');
@@ -368,11 +381,11 @@ export default function Dashboard() {
         } else {
           setScheduleTime(cron || '');
         }
-        setContentType(docData.content_type || 'short');
+
       } else {
         setSchedule(null);
         setScheduleTime('');
-        setContentType('short');
+
       }
     });
     unsubRefs.current.push(unsubSched);
@@ -458,54 +471,58 @@ export default function Dashboard() {
     }
   };
 
-  // Queue for server (video/short — needs daemon)
-  const queueForServer = async () => {
-    setTriggering(true);
-    try {
-      await addDoc(collection(db, 'trigger_queue'), {
-        type: 'GENERATE_PIPELINE',
-        channel_key: channel, user_id: user?.uid,
-        content_type: contentType,
-        status: 'Pending', created_at: new Date().toISOString()
-      });
-      showToast('Queued for server. Content will appear here when your daemon comes online.');
-    } catch (e: any) {
-      showToast('Error: ' + e.message, 'error');
-    } finally {
-      setTriggering(false);
-    }
+  const queueForServer = async (ct: string) => {
+    await addDoc(collection(db, 'trigger_queue'), {
+      type: 'GENERATE_PIPELINE',
+      channel_key: channel, user_id: user?.uid,
+      content_type: ct,
+      status: 'Pending', created_at: new Date().toISOString()
+    });
   };
 
-  // Frontend generate (text/image — no server needed)
-  const generateInBrowser = async (missedSchedId?: string) => {
-    if (!geminiKey) {
-      showToast('Gemini API key not found. Please set it in the Strategy Builder.', 'error');
-      return;
-    }
-    if (!currentChannelObj) return;
+  const generateInBrowser = async (ct: string, missedSchedId?: string) => {
+    const brain = new FrontendBrain(geminiKey, currentChannelObj!, user!.uid);
+    await brain.runFullGeneration(ct, generateExtraHint || undefined, missedSchedId);
+  };
 
+  const executeChannelStrategy = async (missedSchedId?: string) => {
+    if (!currentChannelObj) return;
+    
     setGenerating(true);
+    setTriggering(true);
     setShowGenerateModal(false);
+    
     try {
-      const brain = new FrontendBrain(geminiKey, currentChannelObj, user!.uid);
-      await brain.runFullGeneration(contentType, generateExtraHint || undefined, missedSchedId);
+      let browserCount = 0;
+      let serverCount = 0;
+
+      for (const ct of (enabledTypes || [])) {
+        if (ct === 'post' || ct === 'image') {
+          if (!geminiKey) {
+            showToast(`Gemini API key missing. Cannot generate ${ct} in browser.`, 'error');
+            continue;
+          }
+          await generateInBrowser(ct, missedSchedId);
+          browserCount++;
+        } else {
+          await queueForServer(ct);
+          serverCount++;
+        }
+      }
+      
       setGenerateExtraHint('');
-      showToast(`Generated! Review content in the pipeline below.`);
+      showToast(`Strategy Executed! ${browserCount} generated in browser, ${serverCount} queued for server.`);
     } catch (e: any) {
-      showToast('Generation failed: ' + e.message, 'error');
+      showToast('Error executing strategy: ' + e.message, 'error');
     } finally {
       setGenerating(false);
+      setTriggering(false);
     }
   };
 
   const handleMissedScheduleGenerate = (scheduleId: string) => {
     setMissedScheduleId(scheduleId);
     setShowGenerateModal(true);
-    // Default to the schedule's content type
-    if (schedule?.content_type) setContentType(schedule.content_type);
-    // Default generation mode based on content type
-    const ct = schedule?.content_type || contentType;
-    setGenerationMode(ct === 'short' || ct === 'video' ? 'queue_server' : 'frontend');
   };
 
   const scheduleEngine = async () => {
@@ -513,19 +530,21 @@ export default function Dashboard() {
     const [hh, mm] = scheduleTime.split(':');
     const cron_expression = `${parseInt(mm)} ${parseInt(hh)} * * *`;
     try {
-      const q = query(collection(db, 'schedules'), where('channel_key', '==', channel), where('content_type', '==', contentType));
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        await updateDoc(doc(db, 'schedules', snapshot.docs[0].id), {
-          cron_expression, is_active: true, updated_at: new Date().toISOString(), user_id: user?.uid
-        });
-      } else {
-        await addDoc(collection(db, 'schedules'), {
-          channel_key: channel, content_type: contentType, cron_expression,
-          is_active: true, created_at: new Date().toISOString(), user_id: user?.uid
-        });
+      for (const ct of (enabledTypes || [])) {
+        const q = query(collection(db, 'schedules'), where('channel_key', '==', channel), where('content_type', '==', ct));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          await updateDoc(doc(db, 'schedules', snapshot.docs[0].id), {
+            cron_expression, is_active: true, updated_at: new Date().toISOString(), user_id: user?.uid
+          });
+        } else {
+          await addDoc(collection(db, 'schedules'), {
+            channel_key: channel, content_type: ct, cron_expression,
+            is_active: true, created_at: new Date().toISOString(), user_id: user?.uid
+          });
+        }
       }
-      showToast('Schedule saved for ' + scheduleTime + ' daily!');
+      showToast('Schedule saved for all enabled content types at ' + scheduleTime + ' daily!');
     } catch (e) {
       showToast('Failed to save schedule.', 'error');
     }
@@ -547,7 +566,7 @@ export default function Dashboard() {
   };
 
   // Is content type generatable in browser?
-  const isClientGeneratable = contentType === 'post' || contentType === 'image';
+  
 
   // Check API keys
   const hasMissingKeys = currentChannelObj && (!channelConfig.gemini_api_key || !channelConfig.pexels_api_key);
@@ -673,61 +692,19 @@ export default function Dashboard() {
               <Terminal size={14} /> Manual Generation
             </h2>
 
-            <select
-              value={contentType}
-              onChange={e => setContentType(e.target.value)}
-              className="bg-white dark:bg-[#111111] border border-black/10 dark:border-white/10 text-neutral-900 dark:text-white rounded-lg p-2 text-sm"
-            >
-              <option value="post">Text Post (X / LinkedIn)</option>
-              <option value="image">Image (Instagram / Pinterest)</option>
-              <option value="short">Shorts (YT / IG / TK)</option>
-              <option value="video">Long Video (YouTube)</option>
-            </select>
-
-            <div className="grid grid-cols-2 gap-2 mt-auto">
-              {/* Frontend generate — for text/image */}
-              {isClientGeneratable ? (
-                <button
-                  onClick={() => setShowGenerateModal(true)}
-                  disabled={generating || !geminiKey}
-                  className="col-span-2 py-3 rounded-lg font-bold tracking-wider text-sm flex items-center justify-center gap-2 bg-emerald-500/10 text-emerald-600 border border-emerald-500/50 hover:bg-emerald-500/20 transition-all shadow-[0_0_20px_rgba(16,185,129,0.1)] hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] disabled:opacity-50"
-                >
-                  <Zap size={16} />
-                  {generating ? 'Generating...' : 'Generate Now (Browser)'}
-                </button>
-              ) : (
-                <>
-                  {/* Browser script generation for video */}
-                  <button
-                    onClick={() => setShowGenerateModal(true)}
-                    disabled={generating || !geminiKey}
-                    className="py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 bg-emerald-500/10 text-emerald-600 border border-emerald-500/50 hover:bg-emerald-500/20 transition-all disabled:opacity-50"
-                    title="Generate script in browser, queue video render for when server is online"
-                  >
-                    <Zap size={14} />
-                    {generating ? 'Generating...' : 'Script Now'}
-                  </button>
-                  {/* Queue for server */}
-                  <button
-                    onClick={queueForServer}
-                    disabled={triggering}
-                    className="py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 bg-purple-500/10 text-purple-400 border border-purple-500/50 hover:bg-purple-500/20 transition-all disabled:opacity-50"
-                    title="Queue full pipeline (audio + video + upload) for when server daemon is online"
-                  >
-                    <Power size={14} />
-                    {triggering ? 'Queuing...' : 'Queue Server'}
-                  </button>
-                </>
-              )}
+            <p className="text-xs text-neutral-500">
+              Nexus will autonomously determine what to generate based on your Channel Configuration settings.
+            </p>
+            <div className="flex flex-col gap-2 mt-auto">
+              <button
+                onClick={() => setShowGenerateModal(true)}
+                disabled={generating || triggering}
+                className="w-full py-3 rounded-lg font-bold tracking-wider text-sm flex items-center justify-center gap-2 bg-emerald-500 text-black hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] disabled:opacity-50"
+              >
+                <Zap size={16} />
+                {generating || triggering ? 'Executing...' : 'Execute Channel Strategy'}
+              </button>
             </div>
-
-            {!geminiKey && (
-              <p className="text-xs text-amber-500 text-center">
-                Set your Gemini key in the{' '}
-                <Link href="/channels/new" className="underline hover:text-amber-400">Strategy Builder</Link>{' '}
-                to enable browser generation.
-              </p>
-            )}
           </div>
 
           {/* Schedule Panel */}
@@ -736,7 +713,7 @@ export default function Dashboard() {
               <Calendar size={14} /> Scheduling Network
             </h2>
             <p className="text-xs text-neutral-500">
-              Auto-generate <strong>{contentType}</strong> daily. Runs via daemon when your PC is on.
+              Auto-generate <strong>all active content types</strong> daily. Runs via daemon when your PC is on.
               {hasMissedSchedule && <span className="text-amber-400 ml-1">(Last run missed)</span>}
             </p>
 
@@ -996,51 +973,18 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Content type */}
-            <div>
-              <label className="block text-xs uppercase text-neutral-500 mb-2 font-bold tracking-wider">Content Type</label>
-              <select
-                value={contentType}
-                onChange={e => {
-                  setContentType(e.target.value);
-                  const ct = e.target.value;
-                  setGenerationMode(ct === 'short' || ct === 'video' ? 'queue_server' : 'frontend');
-                }}
-                className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50"
-              >
-                <option value="post">Text Post (X / LinkedIn)</option>
-                <option value="image">Image (Instagram / Pinterest)</option>
-                <option value="short">Shorts (YT / IG / TK)</option>
-                <option value="video">Long Video (YouTube)</option>
-              </select>
-            </div>
-
-            {/* Generation method */}
-            <div>
-              <label className="block text-xs uppercase text-neutral-500 mb-2 font-bold tracking-wider">How to Generate</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setGenerationMode('frontend')}
-                  className={`p-3 rounded-xl border text-left text-xs transition-all ${
-                    generationMode === 'frontend'
-                      ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-500'
-                      : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-neutral-500 hover:border-neutral-400/30'
-                  }`}
-                >
-                  <div className="font-bold mb-1 flex items-center gap-1"><Zap size={12} /> Browser (Now)</div>
-                  <div className="opacity-70">Runs instantly. Best for text/image.</div>
-                </button>
-                <button
-                  onClick={() => setGenerationMode('queue_server')}
-                  className={`p-3 rounded-xl border text-left text-xs transition-all ${
-                    generationMode === 'queue_server'
-                      ? 'bg-purple-500/10 border-purple-500/40 text-purple-400'
-                      : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-neutral-500 hover:border-neutral-400/30'
-                  }`}
-                >
-                  <div className="font-bold mb-1 flex items-center gap-1"><Power size={12} /> Queue (Server)</div>
-                  <div className="opacity-70">Needs daemon. Required for video.</div>
-                </button>
+            {/* Generation Summary */}
+            <div className="bg-black/5 dark:bg-white/5 p-4 rounded-xl border border-black/10 dark:border-white/10">
+              <label className="block text-xs uppercase text-neutral-500 mb-2 font-bold tracking-wider">Strategy Execution</label>
+              <p className="text-sm text-neutral-700 dark:text-neutral-300">
+                Nexus will generate the following enabled types for <strong className="text-emerald-500">{channel}</strong>:
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {(enabledTypes || []).map(ct => (
+                  <span key={ct} className="px-2 py-1 bg-black/10 dark:bg-white/10 rounded-lg text-xs font-mono tracking-wider font-bold uppercase">
+                    {ct}
+                  </span>
+                ))}
               </div>
             </div>
 
@@ -1066,25 +1010,12 @@ export default function Dashboard() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  if (generationMode === 'frontend') {
-                    generateInBrowser(missedScheduleId || undefined);
-                  } else {
-                    queueForServer();
-                    setShowGenerateModal(false);
-                    setMissedScheduleId(null);
-                    setGenerateExtraHint('');
-                  }
-                }}
-                disabled={generating}
-                className={`flex-1 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${
-                  generationMode === 'frontend'
-                    ? 'bg-emerald-500 text-black hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]'
-                    : 'bg-purple-500 text-white hover:bg-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.3)]'
-                } disabled:opacity-50`}
+                onClick={() => executeChannelStrategy(missedScheduleId || undefined)}
+                disabled={generating || triggering}
+                className="flex-1 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all bg-emerald-500 text-black hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50"
               >
-                {generating ? <RefreshCw size={16} className="animate-spin" /> : generationMode === 'frontend' ? <Zap size={16} /> : <Power size={16} />}
-                {generating ? 'Generating...' : generationMode === 'frontend' ? 'Generate Now' : 'Queue for Server'}
+                {generating || triggering ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} />}
+                {generating || triggering ? 'Executing...' : 'Run Everything Now'}
               </button>
             </div>
           </div>
