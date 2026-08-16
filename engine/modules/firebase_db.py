@@ -32,11 +32,47 @@ class FirebaseDBManager:
             channels.append(c)
         return channels
         
+    def get_user_api_keys(self, user_id):
+        """Fetches user-level API keys (gemini_api_key, pexels_api_key, etc.) from users/{user_id}"""
+        import json
+        if not user_id:
+            return {}
+        try:
+            doc = self.db.collection('users').document(user_id).get()
+            if doc.exists:
+                data = doc.to_dict() or {}
+                if 'api_keys_json' in data and data['api_keys_json']:
+                    try:
+                        return json.loads(data['api_keys_json'])
+                    except:
+                        pass
+                if 'gemini_api_key' in data:
+                    return {'gemini_api_key': data['gemini_api_key']}
+        except Exception as e:
+            print(f"⚠️ Error fetching user API keys for {user_id}: {e}")
+        return {}
+
     def get_channel_config(self, channel_key):
-        """Fetches the configuration for a specific channel"""
+        """Fetches the configuration for a specific channel and merges user-level API keys"""
+        import json
         docs = self.db.collection('channels').where(filter=FieldFilter('channel_key', '==', channel_key)).limit(1).stream()
         for doc in docs:
-            return doc.to_dict()
+            data = doc.to_dict()
+            user_id = data.get('user_id')
+            user_keys = self.get_user_api_keys(user_id) if user_id else {}
+            
+            # Parse channel-level api_keys_json
+            channel_keys = {}
+            try:
+                channel_keys = json.loads(data.get('api_keys_json', '{}'))
+            except:
+                channel_keys = {}
+                
+            # Merge: user-level keys take priority for global API integrations
+            merged_keys = {**channel_keys, **user_keys}
+            data['api_keys_json'] = json.dumps(merged_keys)
+            data['user_api_keys'] = user_keys
+            return data
         return None
         
     def update_channel_shadowban(self, channel_key, platform, level, cooldown_end=None):

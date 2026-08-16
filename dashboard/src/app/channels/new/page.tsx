@@ -60,19 +60,29 @@ export default function NewChannelStrategy() {
     scrollToBottom();
   }, [messages, configReady]);
 
-  // Load API Key
+  // Load API Key from user-level api_keys_json
   useEffect(() => {
     if (authLoading || !user) return;
     
     const loadKey = async () => {
-
-      // Check DB
       try {
         const docRef = doc(db, 'users', user.uid);
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && docSnap.data().gemini_api_key) {
-          setGeminiKey(docSnap.data().gemini_api_key);
-          setIsKeySet(true);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          let key = '';
+          if (data.api_keys_json) {
+            try {
+              const parsed = JSON.parse(data.api_keys_json);
+              key = parsed.gemini_api_key || '';
+            } catch {}
+          } else if (data.gemini_api_key) {
+            key = data.gemini_api_key;
+          }
+          if (key) {
+            setGeminiKey(key);
+            setIsKeySet(true);
+          }
         }
       } catch (e) {
         console.error(e);
@@ -87,7 +97,20 @@ export default function NewChannelStrategy() {
     if (!geminiKey) return;
     
     if (user) {
-      await setDoc(doc(db, 'users', user.uid), { gemini_api_key: geminiKey }, { merge: true });
+      try {
+        const docRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(docRef);
+        let existingKeys: any = {};
+        if (docSnap.exists() && docSnap.data().api_keys_json) {
+          try {
+            existingKeys = JSON.parse(docSnap.data().api_keys_json);
+          } catch {}
+        }
+        const updated = { ...existingKeys, gemini_api_key: geminiKey };
+        await setDoc(docRef, { api_keys_json: JSON.stringify(updated) }, { merge: true });
+      } catch (err) {
+        console.error('Failed to save API key to users collection:', err);
+      }
     }
     setIsKeySet(true);
   };

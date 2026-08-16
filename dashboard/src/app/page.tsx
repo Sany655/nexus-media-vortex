@@ -293,7 +293,29 @@ export default function Dashboard() {
     try { return JSON.parse(currentChannelObj?.api_keys_json || '{}'); } catch { return {}; }
   })();
 
-  
+  // User-level API Keys (stored in users/{uid}.api_keys_json)
+  const [userApiKeys, setUserApiKeys] = useState<any>({});
+  const geminiKey = userApiKeys.gemini_api_key || '';
+  const pexelsKey = userApiKeys.pexels_api_key || '';
+
+  // Real-time listener for user profile / user-level api_keys_json
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        try {
+          setUserApiKeys(data.api_keys_json ? JSON.parse(data.api_keys_json) : {});
+        } catch {
+          setUserApiKeys({});
+        }
+      }
+    }, (err) => {
+      console.error('Error fetching user api_keys:', err);
+    });
+    return () => unsub();
+  }, [user]);
+
   const enabledTypes = useMemo(() => {
     if (!channelConfig) return ['short'];
     const types = new Set([
@@ -306,37 +328,26 @@ export default function Dashboard() {
     if (types.size === 0) return ['short'];
   }, [channelConfig]);
 
-  // Gemini API key — pull strictly from Firebase channel config
-  const [geminiKey, setGeminiKey] = useState('');
-  useEffect(() => {
-    if (channelConfig?.gemini_api_key) {
-      setGeminiKey(channelConfig.gemini_api_key);
-    } else {
-      setGeminiKey('');
-    }
-  }, [channelConfig]);
-
   // ----------- Fetch Channels -----------
   useEffect(() => {
     if (!authLoading && !user) { router.push('/login'); return; }
     if (!user) return;
 
-    const fetchChannels = async () => {
-      try {
-        const q = query(collection(db, 'channels'), where('user_id', '==', user.uid));
-        const snapshot = await getDocs(q);
-        const data: any[] = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        setChannels(data);
-        if (data.length > 0 && !channel) {
-          setChannel(data[0].channel_key);
-        }
-      } catch (e) {
-        console.error(e);
+    const q = query(collection(db, 'channels'), where('user_id', '==', user.uid));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const data: any[] = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setChannels(data);
+      if (data.length > 0 && !channel) {
+        setChannel(data[0].channel_key);
       }
       setLoading(false);
-    };
-    fetchChannels();
-  }, [user, authLoading, router]);
+    }, (error) => {
+      console.error("Error fetching channels:", error);
+      setLoading(false);
+    });
+
+    return () => unsub();
+  }, [user, authLoading, router, channel]);
 
   // ----------- Real-time Firestore Listeners (replaces 3s polling) -----------
   useEffect(() => {
@@ -369,7 +380,7 @@ export default function Dashboard() {
     unsubRefs.current.push(unsubContent);
 
     // 2. Schedule — real-time
-    const schedQ = query(collection(db, 'schedules'), where('channel_key', '==', channel));
+    const schedQ = query(collection(db, 'schedules'), where('channel_key', '==', channel), where('user_id', '==', user.uid));
     const unsubSched = onSnapshot(schedQ, snapshot => {
       if (!snapshot.empty) {
         const docData = snapshot.docs[0].data();
@@ -391,7 +402,7 @@ export default function Dashboard() {
     unsubRefs.current.push(unsubSched);
 
     // 3. Brain state — real-time
-    const brainQ = query(collection(db, 'channels'), where('channel_key', '==', channel), limit(1));
+    const brainQ = query(collection(db, 'channels'), where('channel_key', '==', channel), where('user_id', '==', user.uid), limit(1));
     const unsubBrain = onSnapshot(brainQ, snapshot => {
       if (!snapshot.empty) {
         const data = snapshot.docs[0].data();
@@ -424,7 +435,7 @@ export default function Dashboard() {
   const deleteLog = async (topic: string) => {
     if (!confirm(`Delete content for "${topic}"?`)) return;
     try {
-      const q = query(collection(db, 'content_queue'), where('topic', '==', topic));
+      const q = query(collection(db, 'content_queue'), where('topic', '==', topic), where('user_id', '==', user?.uid));
       const snap = await getDocs(q);
       snap.forEach(async d => await deleteDoc(doc(db, 'content_queue', d.id)));
       await addDoc(collection(db, 'trigger_queue'), {
@@ -531,7 +542,7 @@ export default function Dashboard() {
     const cron_expression = `${parseInt(mm)} ${parseInt(hh)} * * *`;
     try {
       for (const ct of (enabledTypes || [])) {
-        const q = query(collection(db, 'schedules'), where('channel_key', '==', channel), where('content_type', '==', ct));
+        const q = query(collection(db, 'schedules'), where('channel_key', '==', channel), where('content_type', '==', ct), where('user_id', '==', user?.uid));
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
           await updateDoc(doc(db, 'schedules', snapshot.docs[0].id), {
@@ -568,21 +579,22 @@ export default function Dashboard() {
   // Is content type generatable in browser?
   
 
-  // Check API keys
-  const hasMissingKeys = currentChannelObj && (!channelConfig.gemini_api_key || !channelConfig.pexels_api_key);
+  // Check API keys at the user level
+  const hasMissingKeys = !!user && (!userApiKeys.gemini_api_key || !userApiKeys.pexels_api_key);
 
   const saveApiKeys = async () => {
     if (!tempGeminiKey || !tempPexelsKey) {
       showToast('Both keys are required.', 'error');
       return;
     }
+    if (!user) return;
     setSavingKeys(true);
     try {
-      const updatedConfig = { ...channelConfig, gemini_api_key: tempGeminiKey, pexels_api_key: tempPexelsKey };
-      await updateDoc(doc(db, 'channels', channel), {
-        api_keys_json: JSON.stringify(updatedConfig)
-      });
-      showToast('API Keys saved securely!');
+      const updatedUserKeys = { ...userApiKeys, gemini_api_key: tempGeminiKey, pexels_api_key: tempPexelsKey };
+      await setDoc(doc(db, 'users', user.uid), {
+        api_keys_json: JSON.stringify(updatedUserKeys)
+      }, { merge: true });
+      showToast('API Keys saved securely to your account!');
     } catch (e: any) {
       showToast('Error saving keys: ' + e.message, 'error');
     } finally {

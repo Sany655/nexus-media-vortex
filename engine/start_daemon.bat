@@ -1,5 +1,5 @@
 @echo off
 cd /d "c:\All\works\nexus-media-vortex\engine"
 call ..\venv\Scripts\activate.bat
-python nexus_daemon.py >> daemon_background.log 2>&1
-
+echo 🚀 Starting Nexus Daemon...
+python -u nexus_daemon.py

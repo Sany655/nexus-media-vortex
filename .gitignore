@@ -8,11 +8,13 @@
 *.sqlite3
 
 # Channel-specific Auth & State (CRITICAL)
-channels/*/youtube_token.json
-channels/*/instagram_session.json
-channels/*/tiktok_cookies.txt
-channels/*/strategy_state.json
-channels/*/client_secret.json
+**/youtube_token.json
+**/instagram_session.json
+**/tiktok_cookies.txt
+**/strategy_state.json
+**/client_secret.json
+engine/channels/*/*.json
+!engine/channels/*/config.json
 
 # Virtual Environments & Caches
 venv/
@@ -26,6 +28,10 @@ assets/audio_clips/
 assets/video_clips/
 assets/temp/
 assets/final/
+engine/assets/audio_clips/
+engine/assets/video_clips/
+engine/assets/temp/
+engine/assets/final/
 
 # Next.js / Dashboard UI
 dashboard/node_modules/

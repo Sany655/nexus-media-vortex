@@ -15,8 +15,11 @@ class ContentBrain:
         self.channel_id = channel_id
         self.db = DatabaseManager(channel_id=self.channel_id)
         
-        # Load channel configuration from DB
-        channel_data = self.db.get_channel_config(self.channel_id)
+        from modules.firebase_db import FirebaseDBManager
+        self.fdb = FirebaseDBManager()
+        
+        # Load channel configuration from Firebase DB
+        channel_data = self.fdb.get_channel_config(self.channel_id)
         if channel_data:
             self.config = channel_data
             try:
@@ -44,7 +47,7 @@ class ContentBrain:
             global client
             client = genai.Client(api_key=custom_gemini_key)
         elif not api_key:
-            raise ValueError("CRITICAL ERROR: Missing Gemini API Key. Please add it to your channel settings.")
+            raise ValueError("CRITICAL ERROR: Missing Gemini API Key. Please add it to your Account Settings on the dashboard.")
 
     def get_trending_topic(self):
         """

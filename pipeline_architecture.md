@@ -92,7 +92,7 @@ The system relies 100% on Firebase Firestore (SQLite has been fully removed) ens
 
 | Collection | Purpose | Key Fields |
 | :--- | :--- | :--- |
-| `users` | Admin authentication and user-level config | `uid`, `email`, `gemini_api_key` |
+| `users` | Admin authentication and user-level global config | `uid`, `email`, `api_keys_json` |
 | `channels` | Channel settings, prompts, and platform limits | `channel_key`, `user_id`, `api_keys_json`, `topic_prompt`, `script_prompt` |
 | `schedules` | Automated cron triggers per channel | `channel_key`, `user_id`, `cron_expression`, `next_run`, `content_type` |
 | `content_queue` | Content history, analytics, and pending reviews | `topic`, `user_id`, `status`, `pipeline_mode`, `generated_caption`, `uploaded_ig`, `youtube_views` |

@@ -4,6 +4,14 @@ import io
 # sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', write_through=True)
 
 import os
+import sys
+
+# Force UTF-8 for background logging to prevent charmap errors on Windows
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 import json
 import time
 import datetime
@@ -113,11 +121,23 @@ def analyze_and_pivot(db, channel_key, current_config, report, state):
         # Save new config to Firebase
         docs = db.db.collection('channels').where('channel_key', '==', channel_key).limit(1).stream()
         for doc in docs:
+            # Preserve existing API keys and merge pause states
+            existing_data = doc.to_dict()
+            try:
+                existing_api_keys = json.loads(existing_data.get('api_keys_json', '{}'))
+            except:
+                existing_api_keys = {}
+            
+            # Update pause states while keeping gemini_api_key, etc.
+            for key in ["pause_yt", "pause_ig", "pause_tk", "pause_fb", "pause_x"]:
+                if key in new_config:
+                    existing_api_keys[key] = new_config[key]
+
             # We preserve Objective Node and other constants
             doc.reference.update({
                 "topic_prompt": new_config.get("topic_prompt", current_config.get("topic_prompt")),
                 "script_prompt": new_config.get("script_prompt", current_config.get("script_prompt")),
-                "api_keys_json": json.dumps(new_config) # Store pause states here
+                "api_keys_json": json.dumps(existing_api_keys)
             })
             
         # AI-Driven Scheduling: Apply MrBeast Mentality schedule

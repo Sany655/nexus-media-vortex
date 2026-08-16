@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 
 const CONTENT_TYPES = [
   { value: 'short', label: 'Shorts' },
@@ -161,11 +161,10 @@ function PlatformCard({ platform, config, updateConfig }: {
                 <button
                   key={ct.value}
                   onClick={() => toggleType(ct.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                    active
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${active
                       ? badgeActiveMap[platform.color]
                       : 'bg-black/5 dark:bg-white/5 text-neutral-400 border-black/10 dark:border-white/10 hover:border-neutral-400/40'
-                  }`}
+                    }`}
                 >
                   {active && <CheckCircle2 size={10} className="inline mr-1" />}
                   {ct.label}
@@ -232,21 +231,46 @@ function SettingsComponent() {
 
     const fetchChannel = async () => {
       try {
+        // 1. Fetch User-level API keys
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        let userKeys: any = {};
+        if (userDocSnap.exists()) {
+          const uData = userDocSnap.data();
+          if (uData.api_keys_json) {
+            try {
+              userKeys = JSON.parse(uData.api_keys_json);
+            } catch (e) {
+              console.error('Failed to parse user api_keys_json');
+            }
+          } else if (uData.gemini_api_key) {
+            userKeys.gemini_api_key = uData.gemini_api_key;
+          }
+        }
+
+        // 2. Fetch Channel-level config
         if (!id) return;
         const docRef = doc(db, 'channels', id);
         const docSnap = await getDoc(docRef);
+        let channelConfigObj: any = {};
         if (docSnap.exists()) {
           const data = docSnap.data();
           setChannelName(data.name || id);
           if (data.api_keys_json) {
             try {
-              const parsed = JSON.parse(data.api_keys_json);
-              setConfig((prev: any) => ({ ...prev, ...parsed }));
+              channelConfigObj = JSON.parse(data.api_keys_json);
             } catch (e) {
-              console.error('Failed to parse api_keys_json');
+              console.error('Failed to parse channel api_keys_json');
             }
           }
         }
+
+        setConfig((prev: any) => ({
+          ...prev,
+          ...channelConfigObj,
+          gemini_api_key: userKeys.gemini_api_key || channelConfigObj.gemini_api_key || '',
+          pexels_api_key: userKeys.pexels_api_key || channelConfigObj.pexels_api_key || '',
+        }));
       } catch (e) {
         console.error(e);
       } finally {
@@ -254,15 +278,39 @@ function SettingsComponent() {
       }
     };
     fetchChannel();
-  }, [user, authLoading, id]);
+  }, [user, authLoading, id, router]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (!id) return;
+      if (!user || !id) {
+        alert("User or Channel not found");
+        return;
+      }
+
+      // 1. Save user-level API keys to users/{uid}
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      let existingUserKeys: any = {};
+      if (userDocSnap.exists() && userDocSnap.data().api_keys_json) {
+        try {
+          existingUserKeys = JSON.parse(userDocSnap.data().api_keys_json);
+        } catch { }
+      }
+      const updatedUserKeys = {
+        ...existingUserKeys,
+        gemini_api_key: config.gemini_api_key || '',
+        pexels_api_key: config.pexels_api_key || '',
+      };
+      await setDoc(userDocRef, {
+        api_keys_json: JSON.stringify(updatedUserKeys)
+      }, { merge: true });
+
+      // 2. Save channel-level settings to channels/{id}
       await updateDoc(doc(db, 'channels', id), {
         api_keys_json: JSON.stringify(config),
       });
+
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
@@ -310,11 +358,10 @@ function SettingsComponent() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 shadow-lg ${
-              saved
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 shadow-lg ${saved
                 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/40 shadow-emerald-500/10'
                 : 'bg-purple-500/10 text-purple-500 border border-purple-500/30 hover:bg-purple-500/20 hover:shadow-purple-500/20'
-            }`}
+              }`}
           >
             {saving ? <Loader2 size={16} className="animate-spin" /> : saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
             {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Configuration'}
@@ -335,11 +382,10 @@ function SettingsComponent() {
             {/* Autonomous */}
             <button
               onClick={() => updateConfig('pipeline_mode', 'autonomous')}
-              className={`p-4 rounded-xl border text-left transition-all ${
-                config.pipeline_mode === 'autonomous'
+              className={`p-4 rounded-xl border text-left transition-all ${config.pipeline_mode === 'autonomous'
                   ? 'bg-emerald-500/10 border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.15)]'
                   : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 hover:border-neutral-400/30'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2 mb-1">
                 <Zap size={16} className={config.pipeline_mode === 'autonomous' ? 'text-emerald-500' : 'text-neutral-400'} />
@@ -358,11 +404,10 @@ function SettingsComponent() {
             {/* Manual Review */}
             <button
               onClick={() => updateConfig('pipeline_mode', 'manual_review')}
-              className={`p-4 rounded-xl border text-left transition-all ${
-                config.pipeline_mode === 'manual_review'
+              className={`p-4 rounded-xl border text-left transition-all ${config.pipeline_mode === 'manual_review'
                   ? 'bg-blue-500/10 border-blue-500/40 shadow-[0_0_20px_rgba(59,130,246,0.15)]'
                   : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 hover:border-neutral-400/30'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2 mb-1">
                 <Eye size={16} className={config.pipeline_mode === 'manual_review' ? 'text-blue-400' : 'text-neutral-400'} />
@@ -457,11 +502,10 @@ function SettingsComponent() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`flex items-center gap-2 px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-xl ${
-              saved
+            className={`flex items-center gap-2 px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-xl ${saved
                 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/40'
                 : 'bg-purple-500 text-white hover:bg-purple-400 shadow-purple-500/30 hover:shadow-purple-500/50'
-            }`}
+              }`}
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : saved ? <CheckCircle2 size={18} /> : <Save size={18} />}
             {saving ? 'Saving...' : saved ? 'Saved!' : 'Save All Settings'}
