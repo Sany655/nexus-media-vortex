@@ -104,3 +104,4 @@ When a video is queued (manually or via schedule), the **Nexus Daemon** spots th
 **Q: Dashboard shows "Missed Scheduled Generation".**
 - **Fix:** This happens if your PC was off during a scheduled cron tick. Click "Generate Now" in the dashboard banner to instantly fire the missed job.
 
+Get-CimInstance Win32_Process -Filter "CommandLine LIKE '%nexus_daemon%'" | Select-Object ProcessId, CommandLine, CreationDate
