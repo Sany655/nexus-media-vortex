@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import os
 import sys
 import json
@@ -6,6 +6,12 @@ import datetime
 import subprocess
 import socketio
 from aiohttp import web
+
+# Force UTF-8 encoding on Windows console
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 
 # Ensure engine directory in path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

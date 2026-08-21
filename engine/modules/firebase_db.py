@@ -11,9 +11,14 @@ class FirebaseDBManager:
     def __init__(self):
         # 1. Initialize Firebase Admin if not already initialized
         if not firebase_admin._apps:
-            cred_path = os.path.join(os.getcwd(), "firebase_credentials.json")
-            if not os.path.exists(cred_path):
-                raise FileNotFoundError("CRITICAL ERROR: firebase_credentials.json not found in root directory!")
+            candidate_paths = [
+                os.path.join(os.getcwd(), "firebase_credentials.json"),
+                os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "firebase_credentials.json"),
+                os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "engine", "firebase_credentials.json")
+            ]
+            cred_path = next((p for p in candidate_paths if os.path.exists(p)), None)
+            if not cred_path:
+                raise FileNotFoundError("CRITICAL ERROR: firebase_credentials.json not found in engine or project root directory!")
             
             cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
