@@ -1,0 +1,15 @@
+---
+description: ContextVC scoped rules for engine/modules/firebase_db.py
+alwaysApply: false
+globs: engine/modules/firebase_db.py
+---
+
+<!-- ctx:begin id=cursor-619d20d0, hash=619d20d0 -->
+## High churn: engine/modules/firebase_db.py
+
+## Summary
+File `engine/modules/firebase_db.py` changed 3 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+<!-- ctx:end -->

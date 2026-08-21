@@ -262,7 +262,7 @@ function ContentReviewPanel({
 function DashboardContent() {
   const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
-  const { isConnected, emitInstantGeneration, emitPublish, emitRetry, emitSyncAnalytics, liveProgress } = useSocket();
+  const { isConnected, emitInstantGeneration, emitPublish, emitRetry, emitSyncAnalytics, emitUpdateSchedule, liveProgress } = useSocket();
 
   const [logs, setLogs] = useState<any[]>([]);
   const [channels, setChannels] = useState<any[]>([]);
@@ -564,6 +564,15 @@ function DashboardContent() {
     const cron_expression = `${parseInt(mm)} ${parseInt(hh)} * * *`;
     try {
       for (const ct of (enabledTypes || [])) {
+        // 1. Instant Socket.IO reschedule
+        emitUpdateSchedule({
+          channel_key: channel,
+          content_type: ct,
+          cron_expression,
+          user_id: user?.uid,
+        });
+
+        // 2. Persistent Firestore save
         const q = query(collection(db, 'schedules'), where('channel_key', '==', channel), where('content_type', '==', ct), where('user_id', '==', user?.uid));
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
@@ -577,7 +586,7 @@ function DashboardContent() {
           });
         }
       }
-      showToast('Schedule saved for all enabled content types at ' + scheduleTime + ' daily!');
+      showToast('⚡ Schedule synchronized with Python Engine at ' + scheduleTime + ' daily!');
     } catch (e) {
       showToast('Failed to save schedule.', 'error');
     }

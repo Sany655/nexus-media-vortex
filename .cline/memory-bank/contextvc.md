@@ -1,6 +1,6 @@
 
 
-<!-- ctx:begin id=cline-memory-bank, hash=ac78ea62 -->
+<!-- ctx:begin id=cline-memory-bank, hash=52b8ed08 -->
 # Cline Memory Bank (ContextVC)
 
 ## Next.js App Router Conventions (constraint)
@@ -16,6 +16,16 @@ Scopes: README.md
 
 ## Summary
 File `README.md` changed 5 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: dashboard/README.md (codemap)
+
+Scopes: dashboard/README.md
+
+## Summary
+File `dashboard/README.md` changed 2 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
@@ -40,12 +50,32 @@ File `dashboard/package-lock.json` changed 3 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 
+## High churn: dashboard/package-lock.json (codemap)
+
+Scopes: dashboard/package-lock.json
+
+## Summary
+File `dashboard/package-lock.json` changed 4 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
 ## High churn: dashboard/package.json (codemap)
 
 Scopes: dashboard/package.json
 
 ## Summary
 File `dashboard/package.json` changed 3 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: dashboard/package.json (codemap)
+
+Scopes: dashboard/package.json
+
+## Summary
+File `dashboard/package.json` changed 4 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
@@ -115,6 +145,16 @@ Auto-generated codemap entry from `ctx backfill`.
 Scopes: dashboard/src/app/page.tsx
 
 ## Summary
+File `dashboard/src/app/page.tsx` changed 8 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: dashboard/src/app/page.tsx (codemap)
+
+Scopes: dashboard/src/app/page.tsx
+
+## Summary
 File `dashboard/src/app/page.tsx` changed 7 times in recent git history.
 
 ## Notes
@@ -140,12 +180,42 @@ File `engine/main.py` changed 3 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 
+## High churn: engine/main.py (codemap)
+
+Scopes: engine/main.py
+
+## Summary
+File `engine/main.py` changed 4 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
 ## High churn: engine/modules/brain.py (codemap)
 
 Scopes: engine/modules/brain.py
 
 ## Summary
 File `engine/modules/brain.py` changed 2 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: engine/modules/firebase_db.py (codemap)
+
+Scopes: engine/modules/firebase_db.py
+
+## Summary
+File `engine/modules/firebase_db.py` changed 3 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: engine/nexus_daemon.py (codemap)
+
+Scopes: engine/nexus_daemon.py
+
+## Summary
+File `engine/nexus_daemon.py` changed 3 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
@@ -180,6 +250,7 @@ File `strategy_brain.py` changed 2 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 

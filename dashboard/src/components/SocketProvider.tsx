@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { Socket } from "socket.io-client";
 import { getSocket } from "@/lib/socket";
@@ -43,6 +43,12 @@ interface SocketContextType {
     user_id?: string;
   }) => void;
   emitSyncAnalytics: (channel_key?: string) => void;
+  emitUpdateSchedule: (payload: {
+    channel_key: string;
+    content_type: string;
+    cron_expression: string;
+    user_id?: string;
+  }) => void;
 }
 
 const SocketContext = createContext<SocketContextType>({
@@ -56,6 +62,7 @@ const SocketContext = createContext<SocketContextType>({
   emitPublish: () => {},
   emitRetry: () => {},
   emitSyncAnalytics: () => {},
+  emitUpdateSchedule: () => {},
 });
 
 export const useSocket = () => useContext(SocketContext);
@@ -176,6 +183,20 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     [socket]
   );
 
+  const emitUpdateSchedule = useCallback(
+    (payload: {
+      channel_key: string;
+      content_type: string;
+      cron_expression: string;
+      user_id?: string;
+    }) => {
+      if (socket) {
+        socket.emit("schedule:update", payload);
+      }
+    },
+    [socket]
+  );
+
   return (
     <SocketContext.Provider
       value={{
@@ -189,6 +210,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         emitPublish,
         emitRetry,
         emitSyncAnalytics,
+        emitUpdateSchedule,
       }}
     >
       {children}

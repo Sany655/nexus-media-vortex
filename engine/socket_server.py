@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import os
 import sys
 import json
@@ -16,70 +16,162 @@ if hasattr(sys.stderr, 'reconfigure'):
 # Ensure engine directory in path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from modules.firebase_db import FirebaseDBManager
+from modules.scheduler_manager import DeterministicScheduler
 
-# Create async Socket.IO server with permissive CORS
 sio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
 app = web.Application()
 sio.attach(app)
 
 db_manager = None
+scheduler = None
+
 try:
     db_manager = FirebaseDBManager()
     print("✅ [SOCKET SERVER] Firebase DB Manager initialized.")
 except Exception as e:
     print(f"⚠️ [SOCKET SERVER] Firebase initialization warning: {e}")
 
+async def execute_pipeline(channel_key, content_type="video", topic=None, hint="", retry_topic=None):
+    """Unified pipeline trigger helper."""
+    print(f"\n🚀 [PIPELINE TRIGGER] Launching engine for '{channel_key}' ({content_type})")
+    
+    # 1. Sync Analytics before generation
+    if db_manager:
+        try:
+            db_manager.check_and_update_all_analytics()
+        except Exception as e:
+            print(f"Analytics check error: {e}")
+
+    # 2. Write override payload if applicable
+    override_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "override.json")
+    if topic or retry_topic or hint:
+        payload = {}
+        if topic: payload["topic"] = topic
+        if retry_topic: payload["retryTopic"] = retry_topic
+        if hint: payload["hint"] = hint
+        payload["content_type"] = content_type
+        payload["channel"] = channel_key
+        with open(override_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f)
+    elif os.path.exists(override_path):
+        os.remove(override_path)
+
+    # 3. Launch main.py
+    lock_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "engine.lock")
+    if not os.path.exists(lock_path):
+        args = ["run_genesis.bat", "--channel", channel_key, "--type", content_type]
+        if os.path.exists(override_path):
+            args.extend(["--override", "override.json"])
+        subprocess.Popen(args, cwd=os.path.dirname(os.path.abspath(__file__)), shell=True)
+        await sio.emit('pipeline:progress', {
+            'stage': 'started',
+            'percent': 10,
+            'details': f"Engine started for {channel_key} ({content_type})"
+        })
+    else:
+        await sio.emit('pipeline:log', {
+            'level': 'WARN',
+            'message': 'Engine is currently executing another task. Job will run once current task finishes.'
+        })
+
+# Instantiate Deterministic Scheduler
+scheduler = DeterministicScheduler(db_manager=db_manager, on_trigger_callback=execute_pipeline)
+
 @sio.event
 async def connect(sid, environ):
     print(f"🔌 [SOCKET] Client connected: {sid}")
+    schedules_info = []
+    if scheduler:
+        for s_id, s_data in scheduler.active_schedules.items():
+            schedules_info.append({
+                'channel_key': s_data['channel_key'],
+                'content_type': s_data['content_type'],
+                'cron_expression': s_data['cron_expression'],
+                'next_run': s_data['next_run'].isoformat() if s_data.get('next_run') else None
+            })
+
     await sio.emit('engine:status', {
         'status': 'online',
         'server_time': datetime.datetime.now().isoformat(),
-        'pid': os.getpid()
+        'pid': os.getpid(),
+        'schedules': schedules_info
     }, to=sid)
 
 @sio.event
 async def disconnect(sid):
     print(f"🔌 [SOCKET] Client disconnected: {sid}")
 
-@sio.event
-async def ping(sid, data=None):
-    await sio.emit('engine:pong', {'timestamp': datetime.datetime.now().isoformat()}, to=sid)
-
 @sio.on('pipeline:progress')
 async def on_pipeline_progress(sid, data):
-    # Re-broadcast pipeline progress to all dashboard clients
     await sio.emit('pipeline:progress', data)
 
 @sio.on('pipeline:log')
 async def on_pipeline_log(sid, data):
-    # Re-broadcast logs to all dashboard clients
     await sio.emit('pipeline:log', data)
+
+@sio.on('schedule:update')
+async def on_schedule_update(sid, data):
+    """
+    Handles instant schedule updates from the Dashboard.
+    Payload: { channel_key, content_type, cron_expression, user_id }
+    """
+    channel_key = data.get('channel_key')
+    content_type = data.get('content_type', 'video')
+    cron_expression = data.get('cron_expression')
+    user_id = data.get('user_id')
+
+    print(f"\n⏰ [SOCKET SCHEDULE] Updating schedule for {channel_key} ({content_type}) to '{cron_expression}'")
+
+    if scheduler and cron_expression:
+        success, next_run_str = scheduler.update_schedule(channel_key, content_type, cron_expression)
+        
+        # Also persist to Firestore
+        if db_manager and success:
+            try:
+                from google.cloud.firestore import FieldFilter
+                docs = db_manager.db.collection('schedules').where(filter=FieldFilter('channel_key', '==', channel_key)).where(filter=FieldFilter('content_type', '==', content_type)).stream()
+                found = False
+                for d in docs:
+                    found = True
+                    d.reference.update({
+                        'cron_expression': cron_expression,
+                        'next_run': next_run_str,
+                        'is_active': True,
+                        'updated_at': datetime.datetime.now().isoformat()
+                    })
+                if not found:
+                    db_manager.db.collection('schedules').add({
+                        'channel_key': channel_key,
+                        'content_type': content_type,
+                        'cron_expression': cron_expression,
+                        'next_run': next_run_str,
+                        'is_active': True,
+                        'created_at': datetime.datetime.now().isoformat(),
+                        'user_id': user_id
+                    })
+            except Exception as e:
+                print(f"Firestore schedule save error: {e}")
+
+        await sio.emit('schedule:updated', {
+            'channel_key': channel_key,
+            'content_type': content_type,
+            'cron_expression': cron_expression,
+            'next_run': next_run_str
+        })
 
 @sio.on('trigger:instant_generation')
 async def on_instant_generation(sid, data):
-    """
-    Handles immediate generation trigger from UI Instant Generation input.
-    Payload: { topic, channel_key, content_type, user_id, hint }
-    """
     topic = data.get('topic')
     channel_key = data.get('channel_key', 'neuron_buster')
     content_type = data.get('content_type', 'short')
     user_id = data.get('user_id')
     hint = data.get('hint', '')
 
-    print(f"\n⚡ [SOCKET TRIGGER] Instant Generation requested for '{topic}' ({content_type}) on channel '{channel_key}'")
+    print(f"\n⚡ [SOCKET TRIGGER] Instant Generation for '{topic}' ({content_type})")
 
-    # Broadcast instant start event
-    await sio.emit('pipeline:progress', {
-        'stage': 'queued',
-        'percent': 5,
-        'details': f"Queueing generation for '{topic}'..."
-    })
-
-    try:
-        if db_manager and topic:
-            # 1. Log or update content queue in Firestore
+    # Record in Firestore
+    if db_manager and topic:
+        try:
             now = datetime.datetime.now()
             db_manager.db.collection('content_queue').add({
                 'topic': topic,
@@ -95,114 +187,87 @@ async def on_instant_generation(sid, data):
                 'uploaded_fb': False,
                 'uploaded_x': False,
             })
+        except Exception as e:
+            print(f"Error logging to content_queue: {e}")
 
-            # 2. Add trigger to Firestore queue for persistence
-            db_manager.db.collection('trigger_queue').add({
-                'type': 'GENERATE_PIPELINE',
-                'channel_key': channel_key,
-                'content_type': content_type,
-                'topic': topic,
-                'status': 'Pending',
-                'created_at': now.isoformat(),
-                'user_id': user_id
-            })
-
-        # 3. Create override payload if custom topic
-        if topic:
-            override_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "override.json")
-            with open(override_path, "w", encoding="utf-8") as f:
-                json.dump({
-                    "topic": topic,
-                    "content_type": content_type,
-                    "channel": channel_key,
-                    "hint": hint
-                }, f)
-
-        # 4. Spawn engine pipeline asynchronously
-        lock_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "engine.lock")
-        if not os.path.exists(lock_path):
-            args = ["run_genesis.bat", "--channel", channel_key, "--type", content_type, "--override", "override.json"]
-            subprocess.Popen(args, cwd=os.path.dirname(os.path.abspath(__file__)), shell=True)
-            await sio.emit('pipeline:progress', {
-                'stage': 'started',
-                'percent': 10,
-                'details': f"Engine pipeline launched for '{topic}'"
-            })
-        else:
-            await sio.emit('pipeline:log', {
-                'level': 'WARN',
-                'message': 'Engine is already executing another task. Job queued in Firestore.'
-            })
-
-    except Exception as e:
-        print(f"❌ [SOCKET TRIGGER ERROR] {e}")
-        await sio.emit('pipeline:progress', {
-            'stage': 'error',
-            'percent': 0,
-            'details': f"Failed to start pipeline: {str(e)}"
-        })
+    await execute_pipeline(channel_key, content_type, topic=topic, hint=hint)
 
 @sio.on('trigger:publish')
 async def on_publish(sid, data):
-    """
-    Handles immediate platform publish trigger.
-    Payload: { topic, channel_key, platform, user_id }
-    """
     topic = data.get('topic')
     channel_key = data.get('channel_key')
     platform = data.get('platform', 'all')
     user_id = data.get('user_id')
 
-    print(f"\n📤 [SOCKET TRIGGER] Instant Publish requested for '{topic}' to {platform}")
+    print(f"\n📤 [SOCKET TRIGGER] Instant Publish for '{topic}' to {platform}")
     await sio.emit('pipeline:progress', {
         'stage': 'uploader',
         'percent': 50,
         'details': f"Publishing '{topic}' to {platform.upper()}..."
     })
 
-    if db_manager:
-        try:
-            db_manager.db.collection('trigger_queue').add({
-                'type': 'PUBLISH_CONTENT',
-                'topic': topic,
-                'channel_key': channel_key,
-                'platform': platform,
-                'status': 'Pending',
-                'created_at': datetime.datetime.now().isoformat(),
-                'user_id': user_id
+    # Direct publish execution
+    try:
+        import re
+        safe_topic = re.sub(r'[^\w\s-]', '', topic).strip().replace(' ', '_')
+        final_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "final", f"{safe_topic}.mp4")
+
+        if os.path.exists(final_filepath):
+            from modules.uploader import DistributionNode
+            uploader = DistributionNode(channel_id=channel_key)
+            ch = db_manager.get_channel_config(channel_key) if db_manager else {}
+            api_keys = json.loads(ch.get('api_keys_json', '{}')) if ch else {}
+
+            platforms_to_publish = [platform] if platform and platform != 'all' else ['ig', 'yt', 'tk']
+            for pk in platforms_to_publish:
+                if api_keys.get(f'pause_{pk}') or api_keys.get(f'disable_{pk}'):
+                    continue
+                if pk == 'ig':
+                    uploader.upload_to_instagram(final_filepath, topic, "")
+                    if db_manager: db_manager.mark_platform_uploaded(topic, 'ig')
+                elif pk == 'yt':
+                    uploader.upload_to_youtube(final_filepath, topic, topic, private=False)
+                    if db_manager: db_manager.mark_platform_uploaded(topic, 'yt')
+                elif pk == 'tk':
+                    res = uploader.upload_to_tiktok(final_filepath, topic)
+                    if res and db_manager:
+                        db_manager.mark_platform_uploaded(topic, 'tk')
+                    elif not res and scheduler:
+                        scheduler.schedule_delayed_retry(topic, channel_key, delay_seconds=1800)
+
+            await sio.emit('pipeline:progress', {
+                'stage': 'done',
+                'percent': 100,
+                'details': f"Publishing complete for '{topic}'"
             })
-        except Exception as e:
-            print(f"Error adding publish trigger: {e}")
+        else:
+            await sio.emit('pipeline:log', {
+                'level': 'ERROR',
+                'message': f"Video file for '{topic}' not found."
+            })
+    except Exception as e:
+        print(f"Publish Error: {e}")
+        await sio.emit('pipeline:log', {
+            'level': 'ERROR',
+            'message': f"Publish failed: {str(e)}"
+        })
 
 @sio.on('trigger:retry')
 async def on_retry(sid, data):
-    """
-    Handles retry for failed/pending content.
-    Payload: { topic, channel_key, user_id }
-    """
     topic = data.get('topic')
     channel_key = data.get('channel_key')
-    user_id = data.get('user_id')
+    print(f"\n🔄 [SOCKET TRIGGER] Retry for '{topic}'")
+    await execute_pipeline(channel_key, "video", retry_topic=topic)
 
-    print(f"\n🔄 [SOCKET TRIGGER] Retry requested for '{topic}'")
-    await sio.emit('pipeline:progress', {
-        'stage': 'queued',
-        'percent': 5,
-        'details': f"Retrying generation for '{topic}'..."
-    })
-
+@sio.on('trigger:sync_analytics')
+async def on_sync_analytics(sid, data):
     if db_manager:
-        try:
-            db_manager.db.collection('trigger_queue').add({
-                'type': 'GENERATE_PIPELINE',
-                'channel_key': channel_key,
-                'retryTopic': topic,
-                'status': 'Pending',
-                'created_at': datetime.datetime.now().isoformat(),
-                'user_id': user_id
-            })
-        except Exception as e:
-            print(f"Error adding retry trigger: {e}")
+        print("\n🔄 [SOCKET TRIGGER] Syncing analytics...")
+        db_manager.check_and_update_all_analytics()
+        await sio.emit('pipeline:log', {
+            'level': 'INFO',
+            'message': 'Analytics synchronized successfully.'
+        })
 
 async def start_server(host="0.0.0.0", port=5001):
     runner = web.AppRunner(app)
@@ -211,8 +276,8 @@ async def start_server(host="0.0.0.0", port=5001):
     await site.start()
     print(f"🚀 [SOCKET SERVER] Socket.IO Server running at http://{host}:{port}")
 
-if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(start_server())
-    loop.run_forever()
+    # Initial sync with Firestore
+    if scheduler:
+        scheduler.sync_with_firestore()
+        # Start scheduler loop in background
+        asyncio.create_task(scheduler.run())
