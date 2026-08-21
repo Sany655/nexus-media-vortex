@@ -1,4 +1,5 @@
 ﻿import asyncio
+import base64
 import re
 import urllib.request
 from bs4 import BeautifulSoup
@@ -9,25 +10,26 @@ USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 async def fetch_page_content(url: str, max_chars: int = 5000) -> dict:
     """
     Renders JavaScript-heavy web pages (React, Next.js, Vue, Facebook pages)
-    using headless Chromium and extracts clean, structured text.
+    using headless Chromium, captures full-page screenshot for multimodal AI,
+    and extracts clean, structured text.
     """
     if not url.startswith("http://") and not url.startswith("https://"):
         url = "https://" + url
 
-    print(f"🌐 [WEB RESEARCHER] Rendering JS page: {url}")
+    print(f"🌐 [WEB RESEARCHER] Rendering JS page with Multimodal Snapshot: {url}")
     
-    # 1. Try Playwright Headless Browser (Full JS & Single Page App execution)
+    # 1. Try Playwright Headless Browser (Full JS & Visual Snapshot)
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             context = await browser.new_context(
                 user_agent=USER_AGENT,
-                viewport={"width": 1280, "height": 800}
+                viewport={"width": 1280, "height": 900}
             )
             page = await context.new_page()
 
             # Set navigation timeout
-            await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+            await page.goto(url, wait_until="domcontentloaded", timeout=18000)
             
             # Allow dynamic JS scripts and hydrations to settle
             try:
@@ -37,12 +39,16 @@ async def fetch_page_content(url: str, max_chars: int = 5000) -> dict:
 
             title = await page.title()
 
-            # Extract text from visible elements, ignoring scripts and styles
+            # Capture visual screenshot as JPEG (compressed for fast transmission to Gemini)
+            screenshot_bytes = await page.screenshot(type="jpeg", quality=75, full_page=False)
+            screenshot_b64 = base64.b64encode(screenshot_bytes).decode('utf-8')
+
+            # Extract text from visible elements
             content = await page.evaluate("""() => {
                 const unwanted = document.querySelectorAll('script, style, noscript, nav, footer, svg, header');
                 unwanted.forEach(el => el.remove());
                 
-                // For social/Facebook pages, extract post bodies and headings
+                // Extract main container text
                 const main = document.querySelector('main, article, [role="main"], body');
                 return main ? (main.innerText || main.textContent) : document.body.innerText;
             }""")
@@ -56,12 +62,13 @@ async def fetch_page_content(url: str, max_chars: int = 5000) -> dict:
             if len(clean_text) > max_chars:
                 clean_text = clean_text[:max_chars] + "\n...[truncated for length]"
 
-            print(f"✅ [WEB RESEARCHER] Successfully extracted {len(clean_text)} chars from {url}")
+            print(f"✅ [WEB RESEARCHER] Extracted {len(clean_text)} chars + visual snapshot from {url}")
             return {
                 "success": True,
                 "url": url,
                 "title": title or "Web Page",
-                "content": clean_text
+                "content": clean_text,
+                "screenshot_b64": screenshot_b64
             }
 
     except Exception as e:
@@ -84,7 +91,8 @@ async def fetch_page_content(url: str, max_chars: int = 5000) -> dict:
                     "success": True,
                     "url": url,
                     "title": title,
-                    "content": clean_text
+                    "content": clean_text,
+                    "screenshot_b64": None
                 }
         except Exception as fallback_err:
             print(f"❌ [WEB RESEARCHER] Fallback error: {fallback_err}")
@@ -92,5 +100,6 @@ async def fetch_page_content(url: str, max_chars: int = 5000) -> dict:
                 "success": False,
                 "url": url,
                 "title": "Error Loading URL",
-                "content": f"Could not extract content from {url}: {str(e)}"
+                "content": f"Could not extract content from {url}: {str(e)}",
+                "screenshot_b64": None
             }

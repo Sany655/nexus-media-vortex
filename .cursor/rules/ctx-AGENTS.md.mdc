@@ -4,7 +4,7 @@ alwaysApply: false
 globs: AGENTS.md
 ---
 
-<!-- ctx:begin id=cursor-e7af9e7e, hash=e7af9e7e -->
+<!-- ctx:begin id=cursor-06f0e83d, hash=06f0e83d -->
 ## High churn: AGENTS.md
 
 ## Summary
@@ -12,4 +12,13 @@ File `AGENTS.md` changed 4 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: AGENTS.md
+
+## Summary
+File `AGENTS.md` changed 5 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+

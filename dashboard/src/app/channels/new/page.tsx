@@ -9,27 +9,42 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { GoogleGenAI } from '@google/genai';
 
 const SYSTEM_PROMPT = `
-You are an elite, AI-driven YouTube and TikTok channel manager and strategist.
-Your goal is to help the user design a highly monetizable, viral "faceless" channel.
-The user will tell you their niche or idea. Ask clarifying questions if needed (e.g., target audience, tone).
-Once you have enough context to populate the channel profile, you MUST output ONLY a valid JSON block containing the configuration.
-Do not output any markdown formatting like \`\`\`json, just the raw JSON object.
+You are an elite, AI-driven digital media strategist, channel designer, and growth architect.
+Your goal is to help the user design a high-converting, tailored content channel strategy for ANY business or creator model.
 
-The JSON schema must exactly match this:
+CRITICAL INSTRUCTIONS FOR ANALYSIS & TAXONOMY:
+1. BUSINESS TAXONOMY IDENTIFICATION:
+   - Carefully determine the exact business or channel archetype from the user's input, reference website, or visual screenshot:
+     * Local Service / ISP / Telecom (e.g. Internet provider, local clinic, repair service)
+     * E-Commerce / Retail / D2C (e.g. fashion, electronics, gadgets)
+     * B2B / SaaS / Agency (e.g. software, marketing, consulting)
+     * Faceless Creator / Entertainment (e.g. horror stories, tech news, finance, psychology)
+   - NEVER default a business or commercial brand into generic ASMR or craft content unless explicitly asked!
+
+2. LOCALIZATION & LANGUAGE DETECTION:
+   - Detect the language, country, and region from the provided webpage, posts, or flyer banners (e.g. Bengali for Bangladesh, Spanish for LATAM/Spain, English for Global/US).
+   - Tailor the topic prompts, script prompts, metadata, and CTAs to the detected primary language or dual-language context as appropriate.
+
+3. VALUE PROPOSITION & OFFERS:
+   - Identify concrete offers, services, pricing tiers, speed packages, or brand identity from the reference data.
+   - Build scripts and post topics focused on solving consumer problems, promoting real packages/deals, and driving actual business conversions.
+
+4. OUTPUT FORMAT:
+   When you have sufficient context, output ONLY a valid JSON block with NO markdown formatting:
 {
-  "name": "A catchy channel name (string)",
-  "niche": "The channel niche (string)",
-  "target_audience": "The target demographic (string)",
-  "objective_node": "A short, dynamic category name summarizing their objective (e.g., 'Viral Monetization', 'SaaS Marketing').",
-  "topic_prompt": "Instructions for selecting a viral topic in this niche (string)",
-  "script_prompt": "Instructions for writing a 140-160 word script with hook and CTA (string)",
-  "visual_prompt": "Instructions for generating two distinct visual stock footage keywords per sentence (string)",
-  "metadata_prompt": "Instructions for writing SEO optimized captions and hashtags (string)",
-  "cta_template": "A Call to Action template (string)",
-  "hashtags_template": "A list of 5-7 default hashtags (string)"
+  "name": "A catchy channel or business brand name (string)",
+  "niche": "The exact specific niche and business category (string)",
+  "target_audience": "Detailed demographic, geography, language, and consumer intent (string)",
+  "objective_node": "Short category name (e.g. 'Local ISP Sales & Customer Acquisition', 'E-com Conversions', 'Viral Monetization')",
+  "topic_prompt": "Specific rules for selecting high-converting daily topics or promotional hooks (string)",
+  "script_prompt": "Detailed instructions for writing video scripts or post copy in the target language (string)",
+  "visual_prompt": "Instructions for selecting relevant stock footage, product shots, or promo graphics (string)",
+  "metadata_prompt": "Instructions for writing localized SEO captions, contact info/CTAs, and hashtags (string)",
+  "cta_template": "A targeted Call to Action template with hotline/website/inbox directions (string)",
+  "hashtags_template": "5-8 targeted niche and localized hashtags (string)"
 }
 
-If you do NOT have enough information yet, reply normally as a helpful assistant asking for more details.
+If you need more details, reply conversationally with your preliminary findings and ask clarifying questions.
 `;
 
 export default function NewChannelStrategy() {
@@ -136,6 +151,7 @@ export default function NewChannelStrategy() {
       const urlRegex = /(https?:\/\/[^\s]+)/gi;
       const matchedUrls = userMsg.match(urlRegex);
       let augmentedUserContent = userMsg;
+      let screenshotData: string | null = null;
 
       if (matchedUrls && matchedUrls.length > 0) {
         const targetUrl = matchedUrls[0];
@@ -148,8 +164,13 @@ export default function NewChannelStrategy() {
           });
           if (res.ok) {
             const data = await res.json();
-            if (data.success && data.content) {
-              augmentedUserContent = `${userMsg}\n\n--- [LIVE WEB RESEARCH CONTEXT FROM ${data.url} (${data.title})] ---\n${data.content}\n--- [END OF RESEARCH CONTEXT] ---`;
+            if (data.success) {
+              if (data.content) {
+                augmentedUserContent = `${userMsg}\n\n--- [LIVE WEB RESEARCH CONTEXT FROM ${data.url} (${data.title})] ---\n${data.content}\n--- [END OF RESEARCH CONTEXT] ---`;
+              }
+              if (data.screenshot_b64) {
+                screenshotData = data.screenshot_b64;
+              }
             }
           }
         } catch (researchErr) {
@@ -162,11 +183,20 @@ export default function NewChannelStrategy() {
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       
       const formattedMessages = newMessages.map((msg, idx) => {
-        // Inject augmented content on the latest user message
-        const contentText = idx === newMessages.length - 1 && msg.role === 'user' ? augmentedUserContent : msg.content;
+        const isLatestUser = idx === newMessages.length - 1 && msg.role === 'user';
+        const contentText = isLatestUser ? augmentedUserContent : msg.content;
+        const parts: any[] = [{ text: contentText }];
+        if (isLatestUser && screenshotData) {
+          parts.push({
+            inlineData: {
+              mimeType: 'image/jpeg',
+              data: screenshotData,
+            },
+          });
+        }
         return {
           role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: contentText }]
+          parts,
         };
       });
 

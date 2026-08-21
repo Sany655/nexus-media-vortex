@@ -7,13 +7,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Missing url parameter" }, { status: 400 });
     }
 
-    // 1. Forward to Python Engine (which has full Playwright Headless Chromium for JS/Facebook rendering)
+    // 1. Forward to Python Engine (Playwright Headless Chromium with Multimodal Snapshot)
     try {
       const engineRes = await fetch("http://localhost:5001/api/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
-        signal: AbortSignal.timeout(18000),
+        signal: AbortSignal.timeout(22000),
       });
 
       if (engineRes.ok) {
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       url,
       title: "Extracted Reference Page",
       content: cleanText,
+      screenshot_b64: null,
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

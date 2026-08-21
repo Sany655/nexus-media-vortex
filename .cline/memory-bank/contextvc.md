@@ -1,6 +1,6 @@
 
 
-<!-- ctx:begin id=cline-memory-bank, hash=71c6c695 -->
+<!-- ctx:begin id=cline-memory-bank, hash=de70643b -->
 # Cline Memory Bank (ContextVC)
 
 ## Next.js App Router Conventions (constraint)
@@ -16,6 +16,26 @@ Scopes: AGENTS.md
 
 ## Summary
 File `AGENTS.md` changed 4 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: AGENTS.md (codemap)
+
+Scopes: AGENTS.md
+
+## Summary
+File `AGENTS.md` changed 5 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: CLAUDE.md (codemap)
+
+Scopes: CLAUDE.md
+
+## Summary
+File `CLAUDE.md` changed 5 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
@@ -36,6 +56,16 @@ Scopes: GEMINI.md
 
 ## Summary
 File `GEMINI.md` changed 4 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: GEMINI.md (codemap)
+
+Scopes: GEMINI.md
+
+## Summary
+File `GEMINI.md` changed 5 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
@@ -136,6 +166,16 @@ Scopes: dashboard/src/app/api/database/route.ts
 
 ## Summary
 File `dashboard/src/app/api/database/route.ts` changed 2 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: dashboard/src/app/channels/new/page.tsx (codemap)
+
+Scopes: dashboard/src/app/channels/new/page.tsx
+
+## Summary
+File `dashboard/src/app/channels/new/page.tsx` changed 7 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
@@ -300,6 +340,16 @@ File `engine/socket_server.py` changed 3 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 
+## High churn: engine/socket_server.py (codemap)
+
+Scopes: engine/socket_server.py
+
+## Summary
+File `engine/socket_server.py` changed 4 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
 ## High churn: engine/start_daemon.bat (codemap)
 
 Scopes: engine/start_daemon.bat
@@ -330,6 +380,7 @@ File `strategy_brain.py` changed 2 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 

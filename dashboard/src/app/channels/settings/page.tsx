@@ -1,14 +1,16 @@
-"use client";
-import React, { useState, useEffect, Suspense } from 'react';
+﻿"use client";
+import React, { useState, useEffect, Suspense, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Settings, Save, ArrowLeft, Loader2, ToggleLeft, ToggleRight,
-  Camera, Video, MessageCircle, Globe, Zap, Eye, CheckCircle2
+  Camera, Video, MessageCircle, Globe, Zap, Eye, CheckCircle2,
+  Bot, Sparkles, Send, RefreshCw, MessageSquare, ChevronDown, ChevronUp, Layers
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { GoogleGenAI } from '@google/genai';
 
 const CONTENT_TYPES = [
   { value: 'short', label: 'Shorts' },
@@ -102,24 +104,8 @@ function PlatformCard({ platform, config, updateConfig }: {
     updateConfig(typesKey, updated);
   };
 
-  const colorMap: Record<string, string> = {
-    pink: 'border-pink-500/20 bg-pink-500/5',
-    red: 'border-red-500/20 bg-red-500/5',
-    neutral: 'border-neutral-500/20 bg-neutral-500/5',
-    blue: 'border-blue-500/20 bg-blue-500/5',
-    sky: 'border-sky-400/20 bg-sky-400/5',
-  };
-
-  const badgeActiveMap: Record<string, string> = {
-    pink: 'bg-pink-500/20 text-pink-400 border-pink-500/40',
-    red: 'bg-red-500/20 text-red-400 border-red-500/40',
-    neutral: 'bg-neutral-400/20 text-neutral-300 border-neutral-500/40',
-    blue: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
-    sky: 'bg-sky-400/20 text-sky-300 border-sky-400/40',
-  };
-
   return (
-    <div className={`bg-white dark:bg-[#0a0a0a] rounded-2xl p-6 border border-black/10 dark:border-white/5 shadow-xl`}>
+    <div className="bg-white dark:bg-[#0a0a0a] rounded-2xl p-6 border border-black/10 dark:border-white/5 shadow-xl">
       <h2 className="text-base font-semibold mb-5 flex items-center gap-2">
         {Icon ? <Icon size={18} className={platform.iconClass} /> : (
           <span className="font-black text-sm text-black dark:text-white">TK</span>
@@ -131,7 +117,6 @@ function PlatformCard({ platform, config, updateConfig }: {
       </h2>
 
       <div className="space-y-4">
-        {/* Credentials */}
         {platform.fields.map(field => (
           <div key={field.key}>
             <label className="block text-xs uppercase text-neutral-500 mb-1 font-bold tracking-wider">{field.label}</label>
@@ -144,47 +129,48 @@ function PlatformCard({ platform, config, updateConfig }: {
           </div>
         ))}
 
-        {/* Note */}
         {platform.note && (
           <div className="p-3 rounded-lg bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-neutral-500 dark:text-neutral-400 text-xs leading-relaxed">
             {platform.note}
           </div>
         )}
 
-        {/* Content Types */}
-        <div className="pt-3 border-t border-black/5 dark:border-white/5">
-          <label className="block text-xs uppercase text-neutral-500 mb-2 font-bold tracking-wider">Content Types</label>
+        <div>
+          <label className="block text-xs uppercase text-neutral-500 mb-2 font-bold tracking-wider">Enabled Content Types</label>
           <div className="flex flex-wrap gap-2">
-            {CONTENT_TYPES.map(ct => {
-              const active = currentTypes.includes(ct.value);
+            {CONTENT_TYPES.map(type => {
+              const active = currentTypes.includes(type.value);
               return (
                 <button
-                  key={ct.value}
-                  onClick={() => toggleType(ct.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${active
-                      ? badgeActiveMap[platform.color]
-                      : 'bg-black/5 dark:bg-white/5 text-neutral-400 border-black/10 dark:border-white/10 hover:border-neutral-400/40'
-                    }`}
+                  key={type.value}
+                  type="button"
+                  onClick={() => toggleType(type.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    active
+                      ? 'bg-purple-500/20 text-purple-400 border-purple-500/40 shadow-sm'
+                      : 'bg-black/5 dark:bg-white/5 text-neutral-500 border-black/10 dark:border-white/10 hover:border-neutral-400/30'
+                  }`}
                 >
-                  {active && <CheckCircle2 size={10} className="inline mr-1" />}
-                  {ct.label}
+                  {type.label}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Pause Toggle */}
-        <div className="flex items-center justify-between pt-3 border-t border-black/5 dark:border-white/5">
-          <div>
-            <span className="text-sm font-medium">Pause Uploads</span>
-            <p className="text-xs text-neutral-500">Temporarily stop auto-publishing to this platform</p>
-          </div>
+        <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
+          <span className="text-xs text-neutral-500">Auto-Publish Status</span>
           <button
+            type="button"
             onClick={() => updateConfig(pauseKey, !config[pauseKey])}
-            className={`transition-colors ${config[pauseKey] ? 'text-red-500' : 'text-green-500'}`}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border transition-all ${
+              config[pauseKey]
+                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+            }`}
           >
-            {config[pauseKey] ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+            {config[pauseKey] ? <ToggleLeft size={14} /> : <ToggleRight size={14} />}
+            {config[pauseKey] ? 'Paused' : 'Active'}
           </button>
         </div>
       </div>
@@ -200,55 +186,73 @@ function SettingsComponent() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [channelName, setChannelName] = useState('');
   const [saved, setSaved] = useState(false);
+  const [channelName, setChannelName] = useState('');
 
   const [config, setConfig] = useState<any>({
-    ig_username: '',
-    ig_password: '',
-    fb_username: '',
-    fb_password: '',
-    tk_username: '',
-    x_username: '',
-    pause_yt: false,
-    pause_ig: false,
-    pause_tk: false,
-    pause_fb: false,
-    pause_x: false,
-    ig_content_types: ['short', 'image'],
-    yt_content_types: ['short', 'video'],
-    tk_content_types: ['short'],
-    fb_content_types: ['short', 'post'],
-    x_content_types: ['post'],
-    pipeline_mode: 'autonomous',
     gemini_api_key: '',
     pexels_api_key: '',
+    pipeline_mode: 'autonomous',
+    ig_username: '',
+    ig_password: '',
+    pause_ig: false,
+    yt_client_secret_path: '',
+    pause_yt: false,
+    tk_username: '',
+    pause_tk: false,
+    fb_username: '',
+    fb_password: '',
+    pause_fb: false,
+    x_username: '',
+    pause_x: false,
   });
+
+  // Strategy Core Data
+  const [strategyData, setStrategyData] = useState<any>({
+    name: '',
+    niche: '',
+    target_audience: '',
+    objective_node: '',
+    topic_prompt: '',
+    script_prompt: '',
+    visual_prompt: '',
+    metadata_prompt: '',
+    cta_template: '',
+    hashtags_template: '',
+  });
+
+  // AI Strategy Copilot State
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const [copilotMessages, setCopilotMessages] = useState<{ role: 'user' | 'model'; content: string }[]>([]);
+  const [copilotInput, setCopilotInput] = useState('');
+  const [copilotLoading, setCopilotLoading] = useState(false);
+  const copilotEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (copilotOpen) {
+      copilotEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [copilotMessages, copilotOpen]);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) { router.push('/'); return; }
+    if (!user) {
+      router.push('/login');
+      return;
+    }
 
     const fetchChannel = async () => {
       try {
-        // 1. Fetch User-level API keys
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
         let userKeys: any = {};
-        if (userDocSnap.exists()) {
-          const uData = userDocSnap.data();
-          if (uData.api_keys_json) {
-            try {
-              userKeys = JSON.parse(uData.api_keys_json);
-            } catch (e) {
-              console.error('Failed to parse user api_keys_json');
-            }
-          } else if (uData.gemini_api_key) {
-            userKeys.gemini_api_key = uData.gemini_api_key;
+        if (userDoc.exists() && userDoc.data().api_keys_json) {
+          try {
+            userKeys = JSON.parse(userDoc.data().api_keys_json);
+          } catch (e) {
+            console.error('Failed to parse user api_keys_json');
           }
         }
 
-        // 2. Fetch Channel-level config
         if (!id) return;
         const docRef = doc(db, 'channels', id);
         const docSnap = await getDoc(docRef);
@@ -256,6 +260,27 @@ function SettingsComponent() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setChannelName(data.name || id);
+          setStrategyData({
+            name: data.name || '',
+            niche: data.niche || '',
+            target_audience: data.target_audience || '',
+            objective_node: data.objective_node || '',
+            topic_prompt: data.topic_prompt || '',
+            script_prompt: data.script_prompt || '',
+            visual_prompt: data.visual_prompt || '',
+            metadata_prompt: data.metadata_prompt || '',
+            cta_template: data.cta_template || '',
+            hashtags_template: data.hashtags_template || '',
+          });
+
+          // Set initial greeting in Copilot
+          setCopilotMessages([
+            {
+              role: 'model',
+              content: `Hello! I am your AI Strategy Copilot for **${data.name || id}**. How would you like to refine your strategy today? (e.g. *"Adjust hooks to focus on fast fiber speed discounts in Bengali"* or *"Target B2B office managers with higher package tiers"*).`
+            }
+          ]);
+
           if (data.api_keys_json) {
             try {
               channelConfigObj = JSON.parse(data.api_keys_json);
@@ -306,8 +331,9 @@ function SettingsComponent() {
         api_keys_json: JSON.stringify(updatedUserKeys)
       }, { merge: true });
 
-      // 2. Save channel-level settings to channels/{id}
+      // 2. Save channel settings and strategy fields to channels/{id}
       await updateDoc(doc(db, 'channels', id), {
+        ...strategyData,
         api_keys_json: JSON.stringify(config),
       });
 
@@ -324,6 +350,83 @@ function SettingsComponent() {
     setConfig((prev: any) => ({ ...prev, [key]: value }));
   };
 
+  const updateStrategyField = (key: string, value: string) => {
+    setStrategyData((prev: any) => ({ ...prev, [key]: value }));
+  };
+
+  // Conversational Strategy Copilot Handler
+  const handleCopilotSend = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!copilotInput.trim() || copilotLoading) return;
+
+    const userText = copilotInput.trim();
+    const updatedMessages = [...copilotMessages, { role: 'user' as const, content: userText }];
+    setCopilotMessages(updatedMessages);
+    setCopilotInput('');
+    setCopilotLoading(true);
+
+    try {
+      const apiKey = config.gemini_api_key;
+      if (!apiKey) {
+        throw new Error("Please enter your Gemini API Key in the API Keys section above.");
+      }
+
+      const copilotSystemPrompt = `
+You are an expert AI Media & Channel Strategist.
+You are assisting the user in refining the live strategy for channel: '${strategyData.name}'.
+
+CURRENT CHANNEL STRATEGY:
+${JSON.stringify(strategyData, null, 2)}
+
+INSTRUCTIONS:
+1. Discuss strategy, hooks, language, pacing, and marketing objectives with the user.
+2. If the user asks to modify, pivot, or adjust the strategy, formulate the updated strategy fields.
+3. At the end of your conversational response, include a JSON block with the updated fields enclosed in \`\`\`json ... \`\`\` so the UI can auto-apply them.
+Allowed JSON keys: niche, target_audience, objective_node, topic_prompt, script_prompt, visual_prompt, metadata_prompt, cta_template, hashtags_template.
+`;
+
+      const ai = new GoogleGenAI({ apiKey });
+      const formatted = updatedMessages.map(m => ({
+        role: m.role,
+        parts: [{ text: m.content }]
+      }));
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: formatted,
+        config: {
+          systemInstruction: copilotSystemPrompt,
+          temperature: 0.7,
+        }
+      });
+
+      const replyText = response.text || '';
+      
+      // Check for JSON update block
+      const jsonMatch = replyText.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[1]);
+          setStrategyData((prev: any) => ({
+            ...prev,
+            ...parsed,
+          }));
+        } catch (err) {
+          console.warn("Could not auto-apply copilot JSON:", err);
+        }
+      }
+
+      setCopilotMessages([...updatedMessages, { role: 'model', content: replyText }]);
+    } catch (err: any) {
+      setCopilotMessages([
+        ...updatedMessages,
+        { role: 'model', content: `⚠️ Error: ${err.message || 'Failed to generate copilot response'}` }
+      ]);
+    } finally {
+      setCopilotLoading(false);
+    }
+  };
+
   if (loading || authLoading) return (
     <div className="flex h-screen items-center justify-center">
       <Loader2 className="animate-spin text-purple-500" size={32} />
@@ -332,7 +435,6 @@ function SettingsComponent() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-800 dark:text-neutral-200 font-sans selection:bg-purple-500/30">
-      {/* Background glows */}
       <div className="fixed top-[-10%] right-[-10%] w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="fixed bottom-[-10%] left-[-10%] w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
 
@@ -360,13 +462,172 @@ function SettingsComponent() {
             disabled={saving}
             className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 shadow-lg ${saved
                 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/40 shadow-emerald-500/10'
-                : 'bg-purple-500/10 text-purple-500 border border-purple-500/30 hover:bg-purple-500/20 hover:shadow-purple-500/20'
+                : 'bg-purple-500 text-white hover:bg-purple-400 shadow-purple-500/30 hover:shadow-purple-500/50'
               }`}
           >
             {saving ? <Loader2 size={16} className="animate-spin" /> : saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
             {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Configuration'}
           </button>
         </header>
+
+        {/* AI Strategy Copilot (Conversational Strategy Modifier) */}
+        <div className="bg-gradient-to-r from-purple-950/20 via-neutral-900/60 to-indigo-950/20 border border-purple-500/30 rounded-2xl p-6 shadow-2xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                <Bot size={20} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-neutral-100 flex items-center gap-2">
+                  AI Strategy Copilot
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase font-mono">
+                    Conversational Refinement
+                  </span>
+                </h2>
+                <p className="text-xs text-neutral-400">
+                  Chat with the Strategy Brain to pivot hooks, adjust regional language, or target new offerings.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCopilotOpen(!copilotOpen)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 transition-colors"
+            >
+              <Sparkles size={13} />
+              {copilotOpen ? 'Hide Copilot Chat' : 'Open Strategy Chat'}
+              {copilotOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          </div>
+
+          {/* Copilot Chat Window */}
+          {copilotOpen && (
+            <div className="pt-4 border-t border-purple-500/20 space-y-3 animate-in fade-in duration-300">
+              <div className="h-64 overflow-y-auto bg-black/40 rounded-xl p-4 space-y-3 font-sans text-xs">
+                {copilotMessages.map((m, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex gap-2.5 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {m.role === 'model' && (
+                      <div className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-300 flex items-center justify-center flex-shrink-0 border border-purple-500/30">
+                        <Bot size={12} />
+                      </div>
+                    )}
+                    <div
+                      className={`max-w-[85%] rounded-xl p-3 leading-relaxed whitespace-pre-wrap ${
+                        m.role === 'user'
+                          ? 'bg-purple-600 text-white rounded-tr-sm'
+                          : 'bg-white/5 border border-white/10 text-neutral-200 rounded-tl-sm'
+                      }`}
+                    >
+                      {m.content}
+                    </div>
+                  </div>
+                ))}
+                {copilotLoading && (
+                  <div className="flex gap-2 items-center text-xs text-purple-400 animate-pulse">
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>Analyzing strategy & formulating prompt pivots...</span>
+                  </div>
+                )}
+                <div ref={copilotEndRef} />
+              </div>
+
+              <form onSubmit={handleCopilotSend} className="flex gap-2">
+                <input
+                  type="text"
+                  value={copilotInput}
+                  onChange={(e) => setCopilotInput(e.target.value)}
+                  placeholder="Tell Copilot what to change (e.g. Focus on 50 Mbps 800Tk ISP discount packages in Bengali)..."
+                  className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-purple-500/50"
+                  disabled={copilotLoading}
+                />
+                <button
+                  type="submit"
+                  disabled={copilotLoading || !copilotInput.trim()}
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50"
+                >
+                  <Send size={12} />
+                  Send
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+
+        {/* Live Strategy Configuration Fields */}
+        <div className="bg-white dark:bg-[#0a0a0a] rounded-2xl p-6 border border-black/10 dark:border-white/5 shadow-xl space-y-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold flex items-center gap-2">
+              <Layers size={18} className="text-purple-500" />
+              Core Strategy & Prompt Prompts
+            </h2>
+            <span className="text-[11px] text-neutral-400 font-mono">Synced with Brain</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs uppercase text-neutral-500 mb-1 font-bold tracking-wider">Channel Niche / Category</label>
+              <input
+                type="text"
+                value={strategyData.niche}
+                onChange={(e) => updateStrategyField('niche', e.target.value)}
+                className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500/50"
+              />
+            </div>
+            <div>
+              <label className="block text-xs uppercase text-neutral-500 mb-1 font-bold tracking-wider">Campaign Objective Node</label>
+              <input
+                type="text"
+                value={strategyData.objective_node}
+                onChange={(e) => updateStrategyField('objective_node', e.target.value)}
+                className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500/50"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase text-neutral-500 mb-1 font-bold tracking-wider">Target Audience & Demographics</label>
+            <input
+              type="text"
+              value={strategyData.target_audience}
+              onChange={(e) => updateStrategyField('target_audience', e.target.value)}
+              className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-purple-500/50"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase text-neutral-500 mb-1 font-bold tracking-wider">Topic Generation Prompt (Rules for Hooks & Angles)</label>
+            <textarea
+              rows={3}
+              value={strategyData.topic_prompt}
+              onChange={(e) => updateStrategyField('topic_prompt', e.target.value)}
+              className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg p-3 text-xs leading-relaxed focus:outline-none focus:border-purple-500/50 font-mono"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase text-neutral-500 mb-1 font-bold tracking-wider">Script Writing Prompt (Structure & Language Instructions)</label>
+            <textarea
+              rows={3}
+              value={strategyData.script_prompt}
+              onChange={(e) => updateStrategyField('script_prompt', e.target.value)}
+              className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg p-3 text-xs leading-relaxed focus:outline-none focus:border-purple-500/50 font-mono"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase text-neutral-500 mb-1 font-bold tracking-wider">Metadata & Caption Prompt</label>
+            <textarea
+              rows={2}
+              value={strategyData.metadata_prompt}
+              onChange={(e) => updateStrategyField('metadata_prompt', e.target.value)}
+              className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg p-3 text-xs leading-relaxed focus:outline-none focus:border-purple-500/50 font-mono"
+            />
+          </div>
+        </div>
 
         {/* Pipeline Mode */}
         <div className="bg-white dark:bg-[#0a0a0a] rounded-2xl p-6 border border-black/10 dark:border-white/5 shadow-xl">
@@ -379,7 +640,6 @@ function SettingsComponent() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Autonomous */}
             <button
               onClick={() => updateConfig('pipeline_mode', 'autonomous')}
               className={`p-4 rounded-xl border text-left transition-all ${config.pipeline_mode === 'autonomous'
@@ -401,7 +661,6 @@ function SettingsComponent() {
               </p>
             </button>
 
-            {/* Manual Review */}
             <button
               onClick={() => updateConfig('pipeline_mode', 'manual_review')}
               className={`p-4 rounded-xl border text-left transition-all ${config.pipeline_mode === 'manual_review'
@@ -423,12 +682,6 @@ function SettingsComponent() {
               </p>
             </button>
           </div>
-
-          {config.pipeline_mode === 'manual_review' && (
-            <div className="mt-4 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 text-xs text-blue-400 leading-relaxed">
-              ℹ️ In Manual Review mode, the daemon will generate and render video but will NOT upload. Content will appear in the Pipeline History with copy/publish controls for each platform.
-            </div>
-          )}
         </div>
 
         {/* API Keys */}
@@ -438,11 +691,10 @@ function SettingsComponent() {
             API Integrations & Keys
           </h2>
           <p className="text-xs text-neutral-500 mb-5">
-            Nexus requires third-party API keys to operate automatically in the background. Your keys are securely stored in your isolated database.
+            Nexus requires third-party API keys to operate automatically in the background.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Gemini API Key */}
             <div className="space-y-2">
               <label className="block text-xs uppercase text-neutral-500 font-bold tracking-wider">Gemini API Key</label>
               <input
@@ -452,16 +704,8 @@ function SettingsComponent() {
                 placeholder="AIzaSy..."
                 className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
               />
-              <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Nexus Usage Tracker</span>
-                <div className="text-right">
-                  <p className="text-[10px] text-neutral-500">Free Tier Limit</p>
-                  <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400">15 RPM / 1M TPM</p>
-                </div>
-              </div>
             </div>
 
-            {/* Pexels API Key */}
             <div className="space-y-2">
               <label className="block text-xs uppercase text-neutral-500 font-bold tracking-wider">Pexels API Key</label>
               <input
@@ -471,13 +715,6 @@ function SettingsComponent() {
                 placeholder="563492ad6f91700001000001..."
                 className="w-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
               />
-              <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">Nexus Usage Tracker</span>
-                <div className="text-right">
-                  <p className="text-[10px] text-neutral-500">Free Tier Limit</p>
-                  <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400">200 / hour</p>
-                </div>
-              </div>
             </div>
           </div>
         </div>

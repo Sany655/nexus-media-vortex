@@ -4,7 +4,7 @@ alwaysApply: false
 globs: GEMINI.md
 ---
 
-<!-- ctx:begin id=cursor-ba8d9a48, hash=ba8d9a48 -->
+<!-- ctx:begin id=cursor-f8dff2ca, hash=f8dff2ca -->
 ## High churn: GEMINI.md
 
 ## Summary
@@ -12,4 +12,13 @@ File `GEMINI.md` changed 4 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: GEMINI.md
+
+## Summary
+File `GEMINI.md` changed 5 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
