@@ -1,113 +1,90 @@
 ocl_version: '0'
-objects_digest: 785396823463e75290cc89bd3d35b6ab687284061e8d9d5b78b55cb9f09e1e22
+objects_digest: b47439773faf8219bfff3395ed7d84475866dd247cd23716c6d832179eb59075
 targets:
-  cursor_mdc:ctx-dashboard-package-lock.json.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-package-lock.json.mdc
-    content_digest: 31efd4d4472d22ad0e544196617f78ae9ab8153f959fa634951bd4707e28bcc6
-    object_ids:
-    - m-56ba572a
-    - m-7c53c55e
-  claude_md:CLAUDE.md:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\CLAUDE.md
-    content_digest: 7f2749ae7f3a1587ea99e325f8b692732278f4e561c2d159072921a7af2b5058
-    object_ids:
-    - c-a1b2c3d4
-  copilot_instructions:copilot-instructions.md:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.github\copilot-instructions.md
-    content_digest: 8acb20b350ffa82be9cf855d4ede90d7a6b3296b5ec99d642e654c9a57ae1598
-    object_ids:
-    - c-a1b2c3d4
-  cursor_mdc:ctx-dashboard-src-app-globals.css.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-src-app-globals.css.mdc
-    content_digest: 5e3aa646bc48717c5defdaaebb29eb5d8ed6261ffc8842acc077ad83bb33fb45
-    object_ids:
-    - m-0e118f23
-  cursor_mdc:ctx-engine-startdaemon.bat.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-engine-startdaemon.bat.mdc
-    content_digest: 9967b2bf13665e4eb0f635c2bf9832f9283f9f97a34cfe15111bca45a70718d4
-    object_ids:
-    - m-47e1defb
-  cline_memory_bank:contextvc.md:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cline\memory-bank\contextvc.md
-    content_digest: fd94c3da267368fded18b5abdd14d1f7d150424491cdf099b5ed69cf7760a5e6
-    object_ids:
-    - c-a1b2c3d4
-    - m-11d99ef3
-    - m-7664a3f3
-    - m-af25ff9d
-    - m-56ba572a
-    - m-7c53c55e
-    - m-4d7ad7c1
-    - m-d41d5bfc
-    - m-84bc28ec
-    - m-6bf35038
-    - m-8294b5d0
-    - m-2e18388f
-    - m-0e118f23
-    - m-f8d90f89
-    - m-0577c907
-    - m-aebce5ec
-    - m-141e8385
-    - m-b0c17981
-    - m-e7b2e337
-    - m-07a2cf7c
-    - m-aad5a4c0
-    - m-b6cfbdb8
-    - m-47e1defb
-    - m-49a633fd
-    - m-3b7b1bc9
-  cursor_mdc:ctx-pipelinearchitecture.md.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-pipelinearchitecture.md.mdc
-    content_digest: 93bc4e76494b430f060be2db89c0cd9efcc609123e98b7db12c12b9708697345
-    object_ids:
-    - m-49a633fd
   cursor_mdc:ctx-dashboard-README.md.mdc:
     path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-README.md.mdc
     content_digest: 1225bffe46278b4fa9c06a6cf70b50f15d10494cf5aca3723df6cf7002be5dac
     object_ids:
     - m-7664a3f3
-  cursor_mdc:ctx-dashboard-src-app-page.tsx.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-src-app-page.tsx.mdc
-    content_digest: af80d03b23344867b3ce6421d74cffcd0db98e18cae4c63cd8d5a6f9bba655e4
-    object_ids:
-    - m-0577c907
-    - m-aebce5ec
-  cursor_mdc:ctx-dashboard-src-app-api-analytics-sync-route.ts.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-src-app-api-analytics-sync-route.ts.mdc
-    content_digest: 432fdaa563bd5d9bd6da36483ff187096c69bf71e14625cadf35fb32913ce1cb
-    object_ids:
-    - m-84bc28ec
-  cursor_mdc:ctx-dashboard-next.config.ts.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-next.config.ts.mdc
-    content_digest: 81646d655857d7a4e9752c7ecb1337fe7ed6f58d298aff4529e71721bd6e4bf5
-    object_ids:
-    - m-af25ff9d
-  cursor_mdc:ctx-engine-nexusdaemon.py.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-engine-nexusdaemon.py.mdc
-    content_digest: c6c80398b8d513f5b56f828f5b81fb011546859c5ad4ab0d983d91478dcf658d
-    object_ids:
-    - m-b6cfbdb8
-  cursor_mdc:ctx-dashboard-src-app-api-database-route.ts.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-src-app-api-database-route.ts.mdc
-    content_digest: 8bb12ad4586ef61fa4ac9bb19c7eb4a6cd012bf23aa581e04eefa03264acbd68
-    object_ids:
-    - m-6bf35038
   cursor_mdc:ctx-engine-main.py.mdc:
     path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-engine-main.py.mdc
     content_digest: 50a6a164aca379985a6ae2d5a3b628c97bee2ba9e43e8f4f5a7da3ffeadb6d25
     object_ids:
     - m-b0c17981
     - m-e7b2e337
-  cursor_mdc:ctx-engine-modules-brain.py.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-engine-modules-brain.py.mdc
-    content_digest: ca2e5683aea8ce5d5c44825e5d17e312eb44adf0fe0dfb0ac9a2cababf5b6221
+  gemini_md:GEMINI.md:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\GEMINI.md
+    content_digest: 03ce3e7fc846520e1acdb100cc8a20473ac17bc840ce1c9e787674de04c03399
     object_ids:
-    - m-07a2cf7c
+    - c-a1b2c3d4
+  cursor_mdc:ctx-dashboard-.gitignore.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-.gitignore.mdc
+    content_digest: ab34062b3752f0f886a85768854216b75ee14193d4fd40897d283b8d49d1ccdd
+    object_ids:
+    - m-d02dc324
+  cursor_mdc:ctx-README.md.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-README.md.mdc
+    content_digest: a247c65669fd30b6a23e16bc23197461eb3a2066fe353d4755237e71f9917dfa
+    object_ids:
+    - m-11d99ef3
+  claude_md:CLAUDE.md:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\CLAUDE.md
+    content_digest: 7f2749ae7f3a1587ea99e325f8b692732278f4e561c2d159072921a7af2b5058
+    object_ids:
+    - c-a1b2c3d4
+  cursor_mdc:ctx-dashboard-src-app-channels-new-page.tsx.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-src-app-channels-new-page.tsx.mdc
+    content_digest: 80110529d8fee73fa76d3098ddf526323e585ed9c0e76843f8a14fd694ac65c5
+    object_ids:
+    - m-8294b5d0
+  cursor_mdc:ctx-dashboard-src-app-page.tsx.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-src-app-page.tsx.mdc
+    content_digest: 8de425648029f07d41cb2c29fadf4c45b37ec9d8f50056c4f6d72df4a4cdfa1f
+    object_ids:
+    - m-0577c907
+    - m-78458b56
+    - m-aebce5ec
+  cursor_mdc:ctx-dashboard-src-app-api-analytics-sync-route.ts.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-src-app-api-analytics-sync-route.ts.mdc
+    content_digest: 432fdaa563bd5d9bd6da36483ff187096c69bf71e14625cadf35fb32913ce1cb
+    object_ids:
+    - m-84bc28ec
   cursor_mdc:ctx-dashboard-src-app-layout.tsx.mdc:
     path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-src-app-layout.tsx.mdc
     content_digest: ef6d157d59a61d98eadeb38bd993bd9188bfa7c87c4e64649afbce985f7f5b8f
     object_ids:
     - m-f8d90f89
+  cursor_mdc:ctx-engine-nexusdaemon.py.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-engine-nexusdaemon.py.mdc
+    content_digest: 1de4e0d0a67b966f777183528634653e1100970d1cfbd13ec901afe9ebad48c3
+    object_ids:
+    - m-8323017e
+    - m-b6cfbdb8
+  cursor_mdc:ctx-pipelinearchitecture.md.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-pipelinearchitecture.md.mdc
+    content_digest: 93bc4e76494b430f060be2db89c0cd9efcc609123e98b7db12c12b9708697345
+    object_ids:
+    - m-49a633fd
+  cursor_mdc:ctx-strategybrain.py.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-strategybrain.py.mdc
+    content_digest: 5695f143a84601df7bad4a6a2140962369d2bc63985c77a71df184208b6e9fcd
+    object_ids:
+    - m-3b7b1bc9
+  agents_md:AGENTS.md:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\AGENTS.md
+    content_digest: 564f974fefef05c6e099139cd68de9414a6caececb4f4089014a9d85da46b824
+    object_ids:
+    - c-a1b2c3d4
+  cursor_mdc:ctx-engine-modules-brain.py.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-engine-modules-brain.py.mdc
+    content_digest: ca2e5683aea8ce5d5c44825e5d17e312eb44adf0fe0dfb0ac9a2cababf5b6221
+    object_ids:
+    - m-07a2cf7c
+  cursor_mdc:ctx-engine-startdaemon.bat.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-engine-startdaemon.bat.mdc
+    content_digest: 9967b2bf13665e4eb0f635c2bf9832f9283f9f97a34cfe15111bca45a70718d4
+    object_ids:
+    - m-47e1defb
   cursor_mdc:ctx-engine-modules-firebasedb.py.mdc:
     path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-engine-modules-firebasedb.py.mdc
     content_digest: a290b651b844dc5747802542bb206294bb7f37bb155703e1f574ed35c25f4c09
@@ -118,39 +95,78 @@ targets:
     content_digest: e5667a315c7ed9d84ba766b9199dfc87de0cf3edfa84d038c2163e9688ea81cc
     object_ids:
     - m-2e18388f
+  cursor_mdc:ctx-dashboard-package-lock.json.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-package-lock.json.mdc
+    content_digest: 31efd4d4472d22ad0e544196617f78ae9ab8153f959fa634951bd4707e28bcc6
+    object_ids:
+    - m-56ba572a
+    - m-7c53c55e
+  cursor_mdc:ctx-dashboard-src-app-api-database-route.ts.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-src-app-api-database-route.ts.mdc
+    content_digest: 8bb12ad4586ef61fa4ac9bb19c7eb4a6cd012bf23aa581e04eefa03264acbd68
+    object_ids:
+    - m-6bf35038
+  copilot_instructions:copilot-instructions.md:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.github\copilot-instructions.md
+    content_digest: 8acb20b350ffa82be9cf855d4ede90d7a6b3296b5ec99d642e654c9a57ae1598
+    object_ids:
+    - c-a1b2c3d4
+  cline_memory_bank:contextvc.md:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cline\memory-bank\contextvc.md
+    content_digest: 67ba5eaf5ad834b21d77232101c2561c5222d1bc49f81470588da6fa8420c4f0
+    object_ids:
+    - c-a1b2c3d4
+    - m-11d99ef3
+    - m-d02dc324
+    - m-7664a3f3
+    - m-af25ff9d
+    - m-56ba572a
+    - m-7c53c55e
+    - m-4d7ad7c1
+    - m-d41d5bfc
+    - m-84bc28ec
+    - m-6bf35038
+    - m-8294b5d0
+    - m-2e18388f
+    - m-0e118f23
+    - m-f8d90f89
+    - m-0577c907
+    - m-78458b56
+    - m-aebce5ec
+    - m-141e8385
+    - m-b0c17981
+    - m-e7b2e337
+    - m-07a2cf7c
+    - m-aad5a4c0
+    - m-8323017e
+    - m-b6cfbdb8
+    - m-8f6025ad
+    - m-47e1defb
+    - m-49a633fd
+    - m-3b7b1bc9
   cursor_mdc:ctx-dashboard-src-lib-firebase.ts.mdc:
     path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-src-lib-firebase.ts.mdc
     content_digest: 7f95fb69b95f0214a72da780200ca47fa56bd583629010cea5bc6db84a4d7bde
     object_ids:
     - m-141e8385
-  gemini_md:GEMINI.md:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\GEMINI.md
-    content_digest: 03ce3e7fc846520e1acdb100cc8a20473ac17bc840ce1c9e787674de04c03399
+  cursor_mdc:ctx-dashboard-src-app-globals.css.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-src-app-globals.css.mdc
+    content_digest: 5e3aa646bc48717c5defdaaebb29eb5d8ed6261ffc8842acc077ad83bb33fb45
     object_ids:
-    - c-a1b2c3d4
-  cursor_mdc:ctx-dashboard-src-app-channels-new-page.tsx.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-src-app-channels-new-page.tsx.mdc
-    content_digest: 80110529d8fee73fa76d3098ddf526323e585ed9c0e76843f8a14fd694ac65c5
+    - m-0e118f23
+  cursor_mdc:ctx-engine-socketserver.py.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-engine-socketserver.py.mdc
+    content_digest: 2020947a61537afc2626db9e9b645ead2d89447a1faa4e24a28e69a78bf0a072
     object_ids:
-    - m-8294b5d0
+    - m-8f6025ad
+  cursor_mdc:ctx-dashboard-next.config.ts.mdc:
+    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-next.config.ts.mdc
+    content_digest: 81646d655857d7a4e9752c7ecb1337fe7ed6f58d298aff4529e71721bd6e4bf5
+    object_ids:
+    - m-af25ff9d
   cursor_mdc:ctx-dashboard-package.json.mdc:
     path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-dashboard-package.json.mdc
     content_digest: f1cb2c2e92069efa09e185329f45efd26fc9cfe0a49b3f6a7e413b4b2647c849
     object_ids:
     - m-4d7ad7c1
     - m-d41d5bfc
-  agents_md:AGENTS.md:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\AGENTS.md
-    content_digest: 564f974fefef05c6e099139cd68de9414a6caececb4f4089014a9d85da46b824
-    object_ids:
-    - c-a1b2c3d4
-  cursor_mdc:ctx-README.md.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-README.md.mdc
-    content_digest: a247c65669fd30b6a23e16bc23197461eb3a2066fe353d4755237e71f9917dfa
-    object_ids:
-    - m-11d99ef3
-  cursor_mdc:ctx-strategybrain.py.mdc:
-    path: \\?\C:\Users\Sany\.gemini\antigravity\worktrees\nexus-media-vortex\implement_contextvc_provider\.cursor\rules\ctx-strategybrain.py.mdc
-    content_digest: 5695f143a84601df7bad4a6a2140962369d2bc63985c77a71df184208b6e9fcd
-    object_ids:
-    - m-3b7b1bc9

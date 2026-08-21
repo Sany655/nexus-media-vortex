@@ -1,6 +1,6 @@
 
 
-<!-- ctx:begin id=cline-memory-bank, hash=52b8ed08 -->
+<!-- ctx:begin id=cline-memory-bank, hash=4ddeaa46 -->
 # Cline Memory Bank (ContextVC)
 
 ## Next.js App Router Conventions (constraint)
@@ -16,6 +16,16 @@ Scopes: README.md
 
 ## Summary
 File `README.md` changed 5 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: dashboard/.gitignore (codemap)
+
+Scopes: dashboard/.gitignore
+
+## Summary
+File `dashboard/.gitignore` changed 2 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
@@ -155,6 +165,16 @@ Auto-generated codemap entry from `ctx backfill`.
 Scopes: dashboard/src/app/page.tsx
 
 ## Summary
+File `dashboard/src/app/page.tsx` changed 9 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: dashboard/src/app/page.tsx (codemap)
+
+Scopes: dashboard/src/app/page.tsx
+
+## Summary
 File `dashboard/src/app/page.tsx` changed 7 times in recent git history.
 
 ## Notes
@@ -215,7 +235,27 @@ Auto-generated codemap entry from `ctx backfill`.
 Scopes: engine/nexus_daemon.py
 
 ## Summary
+File `engine/nexus_daemon.py` changed 4 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: engine/nexus_daemon.py (codemap)
+
+Scopes: engine/nexus_daemon.py
+
+## Summary
 File `engine/nexus_daemon.py` changed 3 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: engine/socket_server.py (codemap)
+
+Scopes: engine/socket_server.py
+
+## Summary
+File `engine/socket_server.py` changed 3 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
@@ -250,6 +290,7 @@ File `strategy_brain.py` changed 2 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 
