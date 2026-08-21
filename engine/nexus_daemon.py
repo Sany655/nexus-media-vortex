@@ -403,5 +403,19 @@ def main_loop():
         print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] 💤 Daemon listening for triggers... (sleeping 60s)")
         time.sleep(60)
 
+def start_socket_thread():
+    try:
+        import asyncio
+        import socket_server
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(socket_server.start_server(host="0.0.0.0", port=5001))
+        loop.run_forever()
+    except Exception as e:
+        print(f"⚠️ [SOCKET THREAD ERROR] Could not start Socket.IO server: {e}")
+
 if __name__ == "__main__":
+    import threading
+    socket_thread = threading.Thread(target=start_socket_thread, daemon=True)
+    socket_thread.start()
     main_loop()

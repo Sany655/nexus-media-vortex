@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "contextvc": {
+      "args": [
+        "serve-mcp"
+      ],
+      "command": "ctx",
+      "env": {
+        "CTX_REPO_ROOT": "\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider"
+      }
+    }
+  }
+}

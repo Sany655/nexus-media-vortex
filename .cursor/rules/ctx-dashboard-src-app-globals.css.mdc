@@ -1,0 +1,18 @@
+---
+description: ContextVC scoped rules for dashboard/src/app/globals.css
+alwaysApply: false
+globs: dashboard/src/app/globals.css
+---
+
+<!-- ctx:begin id=cursor-52b134bf, hash=52b134bf -->
+## High churn: dashboard/src/app/globals.css
+
+## Summary
+File `dashboard/src/app/globals.css` changed 2 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+<!-- ctx:end -->
+
+
+

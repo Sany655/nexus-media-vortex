@@ -1,0 +1,15 @@
+---
+description: ContextVC scoped rules for strategy_brain.py
+alwaysApply: false
+globs: strategy_brain.py
+---
+
+<!-- ctx:begin id=cursor-dd9309e7, hash=dd9309e7 -->
+## High churn: strategy_brain.py
+
+## Summary
+File `strategy_brain.py` changed 2 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+<!-- ctx:end -->

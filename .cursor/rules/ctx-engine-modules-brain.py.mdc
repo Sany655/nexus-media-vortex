@@ -1,0 +1,18 @@
+---
+description: ContextVC scoped rules for engine/modules/brain.py
+alwaysApply: false
+globs: engine/modules/brain.py
+---
+
+<!-- ctx:begin id=cursor-f770d38c, hash=f770d38c -->
+## High churn: engine/modules/brain.py
+
+## Summary
+File `engine/modules/brain.py` changed 2 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+<!-- ctx:end -->
+
+
+

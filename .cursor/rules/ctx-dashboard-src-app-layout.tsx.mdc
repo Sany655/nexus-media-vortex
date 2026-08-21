@@ -1,0 +1,18 @@
+---
+description: ContextVC scoped rules for dashboard/src/app/layout.tsx
+alwaysApply: false
+globs: dashboard/src/app/layout.tsx
+---
+
+<!-- ctx:begin id=cursor-1942f1f8, hash=1942f1f8 -->
+## High churn: dashboard/src/app/layout.tsx
+
+## Summary
+File `dashboard/src/app/layout.tsx` changed 3 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+<!-- ctx:end -->
+
+
+

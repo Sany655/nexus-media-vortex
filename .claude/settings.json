@@ -1,0 +1,70 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "CTX_HOOK_AGENT=claude CTX_HOOK_EVENT=PostToolUse '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.claude\\contextvc-hook.sh'",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "CTX_HOOK_AGENT=claude CTX_HOOK_EVENT=PreCompact '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.claude\\contextvc-hook.sh'",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "CTX_HOOK_AGENT=claude CTX_HOOK_EVENT=PreToolUse '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.claude\\contextvc-hook.sh'",
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write|Bash"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "CTX_HOOK_AGENT=claude CTX_HOOK_EVENT=SessionStart '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.claude\\contextvc-hook.sh'",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "CTX_HOOK_AGENT=claude CTX_HOOK_EVENT=Stop '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.claude\\contextvc-hook.sh'",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "CTX_HOOK_AGENT=claude CTX_HOOK_EVENT=UserPromptSubmit '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.claude\\contextvc-hook.sh'",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ]
+  }
+}

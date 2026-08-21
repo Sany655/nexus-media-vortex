@@ -17,6 +17,9 @@ import {
 } from 'firebase/firestore';
 
 import { FrontendBrain } from '@/lib/frontendBrain';
+import { SocketProvider, useSocket } from '@/components/SocketProvider';
+import { EngineStatusBadge } from '@/components/EngineStatusBadge';
+import { InstantGenerationBar } from '@/components/InstantGenerationBar';
 
 // ----------- Platform publish links -----------
 const PLATFORM_LINKS: Record<string, { label: string; url: string; color: string }> = {
@@ -93,9 +96,20 @@ function ContentReviewPanel({
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const { emitPublish } = useSocket();
+
   const triggerPlatformPublish = async (platformKey: string) => {
     setPublishing(platformKey);
     try {
+      // 1. Instant Socket.IO trigger
+      emitPublish({
+        topic: log.topic,
+        channel_key: channel,
+        platform: platformKey,
+        user_id: user?.uid,
+      });
+
+      // 2. Persistent Firestore queue
       await addDoc(collection(db, 'trigger_queue'), {
         type: 'PUBLISH_CONTENT',
         topic: log.topic,
@@ -244,10 +258,11 @@ function ContentReviewPanel({
   );
 }
 
-// ----------- Main Dashboard -----------
-export default function Dashboard() {
+// ----------- Main Dashboard Content -----------
+function DashboardContent() {
   const { user, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
+  const { isConnected, emitInstantGeneration, emitPublish, emitRetry, emitSyncAnalytics, liveProgress } = useSocket();
 
   const [logs, setLogs] = useState<any[]>([]);
   const [channels, setChannels] = useState<any[]>([]);
@@ -255,7 +270,6 @@ export default function Dashboard() {
   const [schedule, setSchedule] = useState<any>(null);
   const [brainState, setBrainState] = useState<any>(null);
 
-  
   const [scheduleTime, setScheduleTime] = useState('');
   const [pipelineMode, setPipelineMode] = useState<PipelineMode>('autonomous');
 
@@ -451,12 +465,20 @@ export default function Dashboard() {
   const retryLog = async (topic: string, action: 'generate' | 'upload') => {
     setRetryingTopic(topic);
     try {
+      // 1. Instant Socket.IO emit
+      emitRetry({
+        topic,
+        channel_key: channel,
+        user_id: user?.uid,
+      });
+
+      // 2. Persistent Firestore trigger queue
       await addDoc(collection(db, 'trigger_queue'), {
         type: action === 'generate' ? 'RETRY_GENERATION' : 'RETRY_UPLOAD',
         topic, channel_id: channel, user_id: user?.uid,
         status: 'Pending', created_at: new Date().toISOString()
       });
-      showToast(`Retry queued for ${action}.`);
+      showToast(`⚡ Instant retry dispatched for ${action} on '${topic}'.`);
     } catch (e) {
       showToast('Failed to queue retry.', 'error');
     } finally {
@@ -565,10 +587,12 @@ export default function Dashboard() {
     if (isSyncing) return;
     setIsSyncing(true);
     try {
+      emitSyncAnalytics(channel);
       await addDoc(collection(db, 'trigger_queue'), {
-        type: 'SYNC_ANALYTICS', status: 'Pending', created_at: new Date().toISOString()
+        type: 'SYNC_ANALYTICS', status: 'Pending', created_at: new Date().toISOString(),
+        channel_key: channel
       });
-      showToast('Sync triggered! Waiting for daemon...');
+      showToast('⚡ Analytics sync dispatched to Python Engine!');
     } catch {
       showToast('Error syncing.', 'error');
     } finally {
@@ -670,12 +694,25 @@ export default function Dashboard() {
               )}
             </div>
 
+            <EngineStatusBadge />
             <ThemeToggle />
             <button onClick={signOut} className="p-2 text-neutral-400 hover:text-red-400 transition-colors" title="Sign Out">
               <LogOut size={18} />
             </button>
           </div>
         </header>
+
+        {/* Instant Generation Input Bar (Socket.IO + Firestore Flow) */}
+        <InstantGenerationBar
+          channels={channels}
+          currentChannel={channel}
+          onChannelChange={setChannel}
+          userId={user?.uid}
+          geminiKey={geminiKey}
+          pexelsKey={pexelsKey}
+          onSuccessToast={(msg) => showToast(msg, 'success')}
+          onErrorToast={(msg) => showToast(msg, 'error')}
+        />
 
         {/* Missed Schedule Alert */}
         {hasMissedSchedule && (
@@ -1088,5 +1125,13 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <SocketProvider>
+      <DashboardContent />
+    </SocketProvider>
   );
 }

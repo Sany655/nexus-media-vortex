@@ -1,0 +1,12 @@
+version: 0
+targets:
+- agents_md
+- claude_md
+- cursor_mdc
+- copilot_instructions
+- gemini_md
+- cline_memory_bank
+resident_token_budget: 1200
+gate:
+  default_enforcement: warn
+  fail_closed_for_block: true

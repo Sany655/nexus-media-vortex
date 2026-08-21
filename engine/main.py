@@ -5,6 +5,7 @@ from modules.audio import AudioEngine
 from modules.composer import Composer
 from modules.uploader import DistributionNode
 from modules.database import DatabaseManager
+from modules.socket_emitter import PipelineEmitter
 import argparse
 import json
 import os
@@ -317,6 +318,8 @@ async def main():
                     return # Exit after processing queue
 
     # 1. BRAIN: Get Script
+    emitter = PipelineEmitter()
+    emitter.emit_progress("ideation", 15, f"Generating topic and script for channel '{channel_id}'...")
     brain = ContentBrain(channel_id=channel_id)
     try:
         topic = custom_topic if custom_topic else brain.get_trending_topic()
@@ -336,6 +339,8 @@ async def main():
         if not script:
             raise ValueError("Script generation returned None or empty.")
 
+        emitter.emit_progress("ideation", 30, f"Script created ({len(script)} scenes) for '{topic}'")
+
         # Early exit for non-video content types
         if content_type in ["post", "image"]:
             print(f"\n🚀 Phase 6: Distributing {content_type}...")
@@ -345,28 +350,34 @@ async def main():
             db.mark_platform_uploaded(topic, "yt")
             db.mark_platform_uploaded(topic, "tk")
             db.mark_as_uploaded(topic)
+            emitter.emit_progress("done", 100, f"'{topic}' {content_type} completed!")
             print(f"🎉 Pipeline Complete! '{topic}' {content_type} is live (Simulated Upload).")
             return
 
         # 2. AUDIO: Generate Voice
+        emitter.emit_progress("audio", 45, f"Synthesizing AI voiceover for {len(script)} scenes...")
         audio_engine = AudioEngine() 
         script = await audio_engine.process_script(script)
 
         # 3. ASSETS: Get Stock Video
+        emitter.emit_progress("assets", 60, "Fetching HD stock video footage matching scene prompts...")
         asset_manager = AssetManager(api_key=pexels_api_key)
         assets_map = asset_manager.get_videos(script)
 
         # 4. COMPOSER: Merge Video + Audio
+        emitter.emit_progress("composer", 75, "Compositing 9:16 vertical scenes and audio mixing with FFmpeg...")
         composer = Composer()
         final_scene_paths = composer.render_all_scenes(script, assets_map)
         
         # 5. STITCH WITH TRANSITIONS
         if final_scene_paths:
+            emitter.emit_progress("composer", 90, "Applying cinematic xfade transitions...")
             import re
             safe_topic = re.sub(r'[^\w\s-]', '', topic).strip().replace(' ', '_')
             final_filename = f"{safe_topic}.mp4"
             composer.concatenate_with_transitions(final_scene_paths, final_filename)
             clean_cache()
+            emitter.emit_progress("done", 100, f"Video render complete: '{final_filename}'")
             
     except Exception as e:
         error_msg = str(e)

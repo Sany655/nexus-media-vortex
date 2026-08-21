@@ -1,0 +1,53 @@
+{
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "CTX_HOOK_AGENT=cursor CTX_HOOK_EVENT=afterFileEdit '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.cursor\\contextvc-hook.sh'"
+      }
+    ],
+    "beforeMCPExecution": [
+      {
+        "command": "CTX_HOOK_AGENT=cursor CTX_HOOK_EVENT=beforeMCPExecution '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.cursor\\contextvc-hook.sh'",
+        "failClosed": true
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "CTX_HOOK_AGENT=cursor CTX_HOOK_EVENT=beforeShellExecution '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.cursor\\contextvc-hook.sh'",
+        "failClosed": true
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "CTX_HOOK_AGENT=cursor CTX_HOOK_EVENT=postToolUse '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.cursor\\contextvc-hook.sh'"
+      }
+    ],
+    "preCompact": [
+      {
+        "command": "CTX_HOOK_AGENT=cursor CTX_HOOK_EVENT=preCompact '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.cursor\\contextvc-hook.sh'"
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "CTX_HOOK_AGENT=cursor CTX_HOOK_EVENT=preToolUse '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.cursor\\contextvc-hook.sh'",
+        "failClosed": true
+      }
+    ],
+    "sessionStart": [
+      {
+        "command": "CTX_HOOK_AGENT=cursor CTX_HOOK_EVENT=sessionStart '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.cursor\\contextvc-hook.sh'"
+      }
+    ],
+    "stop": [
+      {
+        "command": "CTX_HOOK_AGENT=cursor CTX_HOOK_EVENT=stop '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.cursor\\contextvc-hook.sh'"
+      }
+    ],
+    "userPromptSubmit": [
+      {
+        "command": "CTX_HOOK_AGENT=cursor CTX_HOOK_EVENT=userPromptSubmit '\\\\?\\C:\\Users\\Sany\\.gemini\\antigravity\\worktrees\\nexus-media-vortex\\implement_contextvc_provider\\.cursor\\contextvc-hook.sh'"
+      }
+    ]
+  },
+  "version": 1
+}
