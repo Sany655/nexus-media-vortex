@@ -4,7 +4,7 @@ alwaysApply: false
 globs: dashboard/src/app/globals.css
 ---
 
-<!-- ctx:begin id=cursor-52b134bf, hash=52b134bf -->
+<!-- ctx:begin id=cursor-5e4df07f, hash=5e4df07f -->
 ## High churn: dashboard/src/app/globals.css
 
 ## Summary
@@ -13,6 +13,7 @@ File `dashboard/src/app/globals.css` changed 2 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 

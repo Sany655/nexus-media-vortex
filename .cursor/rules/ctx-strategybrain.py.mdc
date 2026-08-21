@@ -4,7 +4,7 @@ alwaysApply: false
 globs: strategy_brain.py
 ---
 
-<!-- ctx:begin id=cursor-dd9309e7, hash=dd9309e7 -->
+<!-- ctx:begin id=cursor-dd8b55b1, hash=dd8b55b1 -->
 ## High churn: strategy_brain.py
 
 ## Summary
@@ -13,5 +13,6 @@ File `strategy_brain.py` changed 2 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 

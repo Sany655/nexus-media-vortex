@@ -4,7 +4,7 @@ alwaysApply: false
 globs: pipeline_architecture.md
 ---
 
-<!-- ctx:begin id=cursor-fc50296a, hash=fc50296a -->
+<!-- ctx:begin id=cursor-744c24ee, hash=744c24ee -->
 ## High churn: pipeline_architecture.md
 
 ## Summary
@@ -13,6 +13,7 @@ File `pipeline_architecture.md` changed 3 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 

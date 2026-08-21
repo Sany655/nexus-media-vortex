@@ -4,7 +4,7 @@ alwaysApply: false
 globs: engine/modules/brain.py
 ---
 
-<!-- ctx:begin id=cursor-f770d38c, hash=f770d38c -->
+<!-- ctx:begin id=cursor-6c5c05c4, hash=6c5c05c4 -->
 ## High churn: engine/modules/brain.py
 
 ## Summary
@@ -13,6 +13,7 @@ File `engine/modules/brain.py` changed 2 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 

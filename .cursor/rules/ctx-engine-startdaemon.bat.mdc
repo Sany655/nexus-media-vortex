@@ -4,7 +4,7 @@ alwaysApply: false
 globs: engine/start_daemon.bat
 ---
 
-<!-- ctx:begin id=cursor-afaf1a09, hash=afaf1a09 -->
+<!-- ctx:begin id=cursor-36b105f1, hash=36b105f1 -->
 ## High churn: engine/start_daemon.bat
 
 ## Summary
@@ -13,6 +13,7 @@ File `engine/start_daemon.bat` changed 3 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 

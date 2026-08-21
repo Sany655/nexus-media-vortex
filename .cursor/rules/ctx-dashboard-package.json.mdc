@@ -4,7 +4,7 @@ alwaysApply: false
 globs: dashboard/package.json
 ---
 
-<!-- ctx:begin id=cursor-8fd7dd82, hash=8fd7dd82 -->
+<!-- ctx:begin id=cursor-f50ccb90, hash=f50ccb90 -->
 ## High churn: dashboard/package.json
 
 ## Summary
@@ -21,6 +21,7 @@ File `dashboard/package.json` changed 4 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 

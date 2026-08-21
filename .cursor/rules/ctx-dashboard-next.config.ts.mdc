@@ -4,7 +4,7 @@ alwaysApply: false
 globs: dashboard/next.config.ts
 ---
 
-<!-- ctx:begin id=cursor-31a3094b, hash=31a3094b -->
+<!-- ctx:begin id=cursor-934014e5, hash=934014e5 -->
 ## High churn: dashboard/next.config.ts
 
 ## Summary
@@ -13,6 +13,7 @@ File `dashboard/next.config.ts` changed 3 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 

@@ -4,7 +4,7 @@ alwaysApply: false
 globs: engine/socket_server.py
 ---
 
-<!-- ctx:begin id=cursor-cc7b7739, hash=cc7b7739 -->
+<!-- ctx:begin id=cursor-28be0847, hash=28be0847 -->
 ## High churn: engine/socket_server.py
 
 ## Summary
@@ -13,3 +13,4 @@ File `engine/socket_server.py` changed 3 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+

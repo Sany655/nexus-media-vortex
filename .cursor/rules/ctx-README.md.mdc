@@ -4,7 +4,7 @@ alwaysApply: false
 globs: README.md
 ---
 
-<!-- ctx:begin id=cursor-0f86212a, hash=0f86212a -->
+<!-- ctx:begin id=cursor-db7c4610, hash=db7c4610 -->
 ## High churn: README.md
 
 ## Summary
@@ -13,6 +13,7 @@ File `README.md` changed 5 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 

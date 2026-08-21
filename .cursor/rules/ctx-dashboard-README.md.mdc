@@ -4,7 +4,7 @@ alwaysApply: false
 globs: dashboard/README.md
 ---
 
-<!-- ctx:begin id=cursor-a816f65f, hash=a816f65f -->
+<!-- ctx:begin id=cursor-7ebb5755, hash=7ebb5755 -->
 ## High churn: dashboard/README.md
 
 ## Summary
@@ -13,4 +13,5 @@ File `dashboard/README.md` changed 2 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 

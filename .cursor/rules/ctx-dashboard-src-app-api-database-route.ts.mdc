@@ -4,7 +4,7 @@ alwaysApply: false
 globs: dashboard/src/app/api/database/route.ts
 ---
 
-<!-- ctx:begin id=cursor-e0dbf594, hash=e0dbf594 -->
+<!-- ctx:begin id=cursor-4b43b2b6, hash=4b43b2b6 -->
 ## High churn: dashboard/src/app/api/database/route.ts
 
 ## Summary
@@ -13,6 +13,7 @@ File `dashboard/src/app/api/database/route.ts` changed 2 times in recent git his
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 

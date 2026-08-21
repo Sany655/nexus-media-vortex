@@ -4,7 +4,7 @@ alwaysApply: false
 globs: dashboard/src/app/api/analytics/sync/route.ts
 ---
 
-<!-- ctx:begin id=cursor-c8d5e321, hash=c8d5e321 -->
+<!-- ctx:begin id=cursor-c1ce2815, hash=c1ce2815 -->
 ## High churn: dashboard/src/app/api/analytics/sync/route.ts
 
 ## Summary
@@ -13,6 +13,7 @@ File `dashboard/src/app/api/analytics/sync/route.ts` changed 2 times in recent g
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 

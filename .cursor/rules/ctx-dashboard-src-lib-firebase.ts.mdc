@@ -4,7 +4,7 @@ alwaysApply: false
 globs: dashboard/src/lib/firebase.ts
 ---
 
-<!-- ctx:begin id=cursor-6d39bab5, hash=6d39bab5 -->
+<!-- ctx:begin id=cursor-11442ebf, hash=11442ebf -->
 ## High churn: dashboard/src/lib/firebase.ts
 
 ## Summary
@@ -13,5 +13,6 @@ File `dashboard/src/lib/firebase.ts` changed 2 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 

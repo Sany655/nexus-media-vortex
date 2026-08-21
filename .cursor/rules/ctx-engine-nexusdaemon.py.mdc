@@ -4,7 +4,7 @@ alwaysApply: false
 globs: engine/nexus_daemon.py
 ---
 
-<!-- ctx:begin id=cursor-8ea42ae9, hash=8ea42ae9 -->
+<!-- ctx:begin id=cursor-13519047, hash=13519047 -->
 ## High churn: engine/nexus_daemon.py
 
 ## Summary
@@ -21,4 +21,5 @@ File `engine/nexus_daemon.py` changed 3 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 

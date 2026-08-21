@@ -4,7 +4,7 @@ alwaysApply: false
 globs: dashboard/src/app/page.tsx
 ---
 
-<!-- ctx:begin id=cursor-3f329bd9, hash=3f329bd9 -->
+<!-- ctx:begin id=cursor-d658eb64, hash=d658eb64 -->
 ## High churn: dashboard/src/app/page.tsx
 
 ## Summary
@@ -29,6 +29,7 @@ File `dashboard/src/app/page.tsx` changed 7 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 
