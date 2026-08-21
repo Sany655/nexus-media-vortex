@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Power, Database, Activity, Play, CheckCircle, Trash, Terminal,
   X, LogOut, Settings, Plus, Calendar, Bot, RefreshCw, AlertTriangle,
-  Zap, Copy, ExternalLink, Eye, ChevronDown, ChevronUp, Clock, Send,
+  Zap, Copy, ExternalLink, Eye, ChevronDown, ChevronUp, Clock, Send, Sparkles
 } from 'lucide-react';
 
 import { useAuth } from '@/components/AuthProvider';
@@ -141,12 +141,39 @@ function ContentReviewPanel({
   const content = log.generated_content || log.script || '';
   const caption = log.generated_caption || log.description || '';
   const hashtags = log.generated_hashtags || '';
+  const imageUrl = log.image_url || null;
 
   return (
     <div className="border-t border-black/5 dark:border-white/5 bg-black/[0.015] dark:bg-white/[0.015] p-5 space-y-4">
 
+      {/* AI Generated Image Preview */}
+      {imageUrl && (
+        <div className="space-y-2">
+          <div className="text-[10px] font-mono uppercase tracking-widest text-emerald-500 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Sparkles size={12} /> AI Generated Social Image (FLUX.1)
+            </span>
+            <a
+              href={imageUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-emerald-500 hover:underline flex items-center gap-1 text-[11px]"
+            >
+              <ExternalLink size={11} /> Open Full 1080x1080
+            </a>
+          </div>
+          <div className="relative group max-w-xs rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-black/20 aspect-square shadow-md">
+            <img
+              src={imageUrl}
+              alt={log.topic || "Generated Image Post"}
+              className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Generated Content */}
-      {content && (
+      {content && !imageUrl && (
         <div className="space-y-2">
           <div className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Generated Content</div>
           <div className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed bg-black/5 dark:bg-white/5 rounded-lg p-3 max-h-32 overflow-y-auto border border-black/5 dark:border-white/5 font-mono whitespace-pre-wrap">

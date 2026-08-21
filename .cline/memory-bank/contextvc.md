@@ -1,6 +1,6 @@
 
 
-<!-- ctx:begin id=cline-memory-bank, hash=de70643b -->
+<!-- ctx:begin id=cline-memory-bank, hash=b30b5bde -->
 # Cline Memory Bank (ContextVC)
 
 ## Next.js App Router Conventions (constraint)
@@ -25,7 +25,27 @@ Auto-generated codemap entry from `ctx backfill`.
 Scopes: AGENTS.md
 
 ## Summary
+File `AGENTS.md` changed 7 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: AGENTS.md (codemap)
+
+Scopes: AGENTS.md
+
+## Summary
 File `AGENTS.md` changed 5 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: CLAUDE.md (codemap)
+
+Scopes: CLAUDE.md
+
+## Summary
+File `CLAUDE.md` changed 7 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
@@ -46,6 +66,16 @@ Scopes: CLAUDE.md
 
 ## Summary
 File `CLAUDE.md` changed 4 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: GEMINI.md (codemap)
+
+Scopes: GEMINI.md
+
+## Summary
+File `GEMINI.md` changed 7 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
@@ -190,12 +220,32 @@ File `dashboard/src/app/channels/new/page.tsx` changed 6 times in recent git his
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 
+## High churn: dashboard/src/app/channels/new/page.tsx (codemap)
+
+Scopes: dashboard/src/app/channels/new/page.tsx
+
+## Summary
+File `dashboard/src/app/channels/new/page.tsx` changed 8 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
 ## High churn: dashboard/src/app/channels/settings/page.tsx (codemap)
 
 Scopes: dashboard/src/app/channels/settings/page.tsx
 
 ## Summary
 File `dashboard/src/app/channels/settings/page.tsx` changed 4 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: dashboard/src/app/channels/settings/page.tsx (codemap)
+
+Scopes: dashboard/src/app/channels/settings/page.tsx
+
+## Summary
+File `dashboard/src/app/channels/settings/page.tsx` changed 5 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
@@ -246,6 +296,16 @@ Scopes: dashboard/src/app/page.tsx
 
 ## Summary
 File `dashboard/src/app/page.tsx` changed 7 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+
+## High churn: dashboard/src/lib/firebase.ts (codemap)
+
+Scopes: dashboard/src/lib/firebase.ts
+
+## Summary
+File `dashboard/src/lib/firebase.ts` changed 3 times in recent git history.
 
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
@@ -380,6 +440,7 @@ File `strategy_brain.py` changed 2 times in recent git history.
 ## Notes
 Auto-generated codemap entry from `ctx backfill`.
 <!-- ctx:end -->
+
 
 
 

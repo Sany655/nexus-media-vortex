@@ -19,10 +19,12 @@ export interface SceneData {
 export interface GeneratedContent {
   topic: string;
   contentType: string;
-  content: string | SceneData[];
+  content: string | SceneData[] | { caption: string; imagePrompt: string; imageUrl: string };
   caption: string;
   hashtags: string;
   pinnedComment?: string;
+  imageUrl?: string;
+  imagePrompt?: string;
 }
 
 export class FrontendBrain {
@@ -125,7 +127,10 @@ Output ONLY the raw string of the topic, nothing else. Maximum 8 words.
   /**
    * Generates content based on type. Returns structured content.
    */
-  async generateContent(topic: string, contentType: string): Promise<string | SceneData[]> {
+  async generateContent(
+    topic: string,
+    contentType: string
+  ): Promise<string | SceneData[] | { caption: string; imagePrompt: string; imageUrl: string }> {
     const cfg = this.channelConfig;
 
     if (contentType === 'post') {
@@ -143,17 +148,37 @@ Write it as plain text. No JSON. No markdown headers. Just the post content.
 
     if (contentType === 'image') {
       const prompt = `
-${cfg.script_prompt} You are designing an engaging image post about: ${topic}.
+${cfg.script_prompt} You are designing a high-converting, visual social media image post about: ${topic}.
+Target Audience: ${cfg.target_audience || 'General'}
+Objective: ${cfg.objective_node || 'Engagement'}
+
 Output strict JSON only:
-{"caption": "1-2 sentence caption", "image_prompt": "highly detailed visual description for image generation"}
+{
+  "caption": "2-3 sentence engaging social post caption with a clear call-to-action",
+  "image_prompt": "highly detailed, photorealistic, cinematic composition, 8k resolution description of the visual scene for AI image generator"
+}
       `.trim();
       const response = await this.ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
       });
       const clean = (response.text || '').replace(/^```json\n?/, '').replace(/```$/, '').trim();
-      const parsed = JSON.parse(clean);
-      return parsed.caption || '';
+      let parsed: any = {};
+      try {
+        parsed = JSON.parse(clean);
+      } catch {
+        parsed = { caption: topic, image_prompt: `${topic}, cinematic lighting, photorealistic, 8k, professional photography` };
+      }
+
+      const seed = Math.floor(Math.random() * 999999);
+      const encodedPrompt = encodeURIComponent(parsed.image_prompt || topic);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1080&height=1080&model=flux&nologo=true&seed=${seed}`;
+
+      return {
+        caption: parsed.caption || topic,
+        imagePrompt: parsed.image_prompt || topic,
+        imageUrl,
+      };
     }
 
     // For short/video — generate script scenes (video compositing still needs server)
@@ -242,10 +267,17 @@ Return ONLY valid JSON:
 
     // 3. Extract plain text for metadata generation
     let contentText = '';
+    let imageUrl: string | undefined = undefined;
+    let imagePrompt: string | undefined = undefined;
+
     if (typeof content === 'string') {
       contentText = content;
     } else if (Array.isArray(content)) {
       contentText = (content as SceneData[]).map(s => s.text).join(' ');
+    } else if (content && typeof content === 'object') {
+      contentText = (content as any).caption || '';
+      imageUrl = (content as any).imageUrl;
+      imagePrompt = (content as any).imagePrompt;
     }
 
     // 4. Generate metadata
@@ -258,6 +290,8 @@ Return ONLY valid JSON:
       caption: meta.caption,
       hashtags: meta.hashtags,
       pinnedComment: meta.pinnedComment,
+      imageUrl,
+      imagePrompt,
     };
 
     // 5. Save to Firestore
@@ -271,6 +305,8 @@ Return ONLY valid JSON:
       generated_caption: meta.caption,
       generated_hashtags: meta.hashtags,
       pinned_comment: meta.pinnedComment,
+      image_url: imageUrl || null,
+      image_prompt: imagePrompt || null,
       uploaded_ig: false,
       uploaded_yt: false,
       uploaded_tk: false,
