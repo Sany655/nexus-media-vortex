@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import os
 import sys
 import json
@@ -17,6 +17,7 @@ if hasattr(sys.stderr, 'reconfigure'):
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from modules.firebase_db import FirebaseDBManager
 from modules.scheduler_manager import DeterministicScheduler
+from modules.web_researcher import fetch_page_content
 
 sio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
 app = web.Application()
@@ -268,6 +269,26 @@ async def on_sync_analytics(sid, data):
             'level': 'INFO',
             'message': 'Analytics synchronized successfully.'
         })
+
+@sio.on('research:url')
+async def on_research_url(sid, data):
+    url = data.get('url') if isinstance(data, dict) else str(data)
+    print(f"\n🔍 [SOCKET RESEARCH] Analyzing URL: {url}")
+    result = await fetch_page_content(url)
+    return result
+
+async def http_research_handler(request):
+    try:
+        body = await request.json()
+        url = body.get('url')
+        if not url:
+            return web.json_response({'success': False, 'error': 'Missing url parameter'}, status=400)
+        result = await fetch_page_content(url)
+        return web.json_response(result)
+    except Exception as e:
+        return web.json_response({'success': False, 'error': str(e)}, status=500)
+
+app.router.add_post('/api/research', http_research_handler)
 
 async def start_server(host="0.0.0.0", port=5001):
     runner = web.AppRunner(app)

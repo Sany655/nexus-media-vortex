@@ -1,0 +1,15 @@
+---
+description: ContextVC scoped rules for AGENTS.md
+alwaysApply: false
+globs: AGENTS.md
+---
+
+<!-- ctx:begin id=cursor-e7af9e7e, hash=e7af9e7e -->
+## High churn: AGENTS.md
+
+## Summary
+File `AGENTS.md` changed 4 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+<!-- ctx:end -->

@@ -1,0 +1,15 @@
+---
+description: ContextVC scoped rules for CLAUDE.md
+alwaysApply: false
+globs: CLAUDE.md
+---
+
+<!-- ctx:begin id=cursor-c6830141, hash=c6830141 -->
+## High churn: CLAUDE.md
+
+## Summary
+File `CLAUDE.md` changed 4 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+<!-- ctx:end -->

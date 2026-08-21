@@ -1,0 +1,15 @@
+---
+description: ContextVC scoped rules for GEMINI.md
+alwaysApply: false
+globs: GEMINI.md
+---
+
+<!-- ctx:begin id=cursor-ba8d9a48, hash=ba8d9a48 -->
+## High churn: GEMINI.md
+
+## Summary
+File `GEMINI.md` changed 4 times in recent git history.
+
+## Notes
+Auto-generated codemap entry from `ctx backfill`.
+<!-- ctx:end -->

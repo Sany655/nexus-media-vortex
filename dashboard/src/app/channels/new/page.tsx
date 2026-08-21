@@ -115,6 +115,8 @@ export default function NewChannelStrategy() {
     setIsKeySet(true);
   };
 
+  const [researchingUrl, setResearchingUrl] = useState<string | null>(null);
+
   const sendMessage = async () => {
     if (!input.trim() || loading || configReady || !geminiKey) return;
     
@@ -130,12 +132,43 @@ export default function NewChannelStrategy() {
         throw new Error(`Model provider for '${modelType}' is not yet configured for browser-side.`);
       }
 
+      // 1. Check for URLs in user message for automated JS/Web research
+      const urlRegex = /(https?:\/\/[^\s]+)/gi;
+      const matchedUrls = userMsg.match(urlRegex);
+      let augmentedUserContent = userMsg;
+
+      if (matchedUrls && matchedUrls.length > 0) {
+        const targetUrl = matchedUrls[0];
+        setResearchingUrl(targetUrl);
+        try {
+          const res = await fetch('/api/research', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: targetUrl }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.content) {
+              augmentedUserContent = `${userMsg}\n\n--- [LIVE WEB RESEARCH CONTEXT FROM ${data.url} (${data.title})] ---\n${data.content}\n--- [END OF RESEARCH CONTEXT] ---`;
+            }
+          }
+        } catch (researchErr) {
+          console.warn("Could not research URL:", researchErr);
+        } finally {
+          setResearchingUrl(null);
+        }
+      }
+
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       
-      const formattedMessages = newMessages.map((msg) => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
-      }));
+      const formattedMessages = newMessages.map((msg, idx) => {
+        // Inject augmented content on the latest user message
+        const contentText = idx === newMessages.length - 1 && msg.role === 'user' ? augmentedUserContent : msg.content;
+        return {
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: contentText }]
+        };
+      });
 
       const response = await ai.models.generateContent({
         model: modelType,
@@ -162,7 +195,7 @@ export default function NewChannelStrategy() {
       if (isConfigReady && configData) {
         setProposedConfig(configData);
         setConfigReady(true);
-        setMessages([...newMessages, { role: 'model', content: "I have gathered enough information! Please review the proposed channel configuration below." }]);
+        setMessages([...newMessages, { role: 'model', content: "I have analyzed the competitor/reference and gathered enough information! Please review the proposed channel configuration below." }]);
       } else {
         setMessages([...newMessages, { role: 'model', content: reply }]);
       }
@@ -172,6 +205,7 @@ export default function NewChannelStrategy() {
       setMessages(messages); 
     } finally {
       setLoading(false);
+      setResearchingUrl(null);
     }
   };
 
@@ -304,6 +338,13 @@ export default function NewChannelStrategy() {
                 </div>
               ))}
               
+              {researchingUrl && (
+                <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-2 rounded-xl mb-2 animate-pulse">
+                  <Loader2 size={13} className="animate-spin text-emerald-400" />
+                  <span>🌐 Headless Browser rendering JS & analyzing competitor page...</span>
+                </div>
+              )}
+
               {loading && !configReady && (
                 <div className="flex gap-4 justify-start">
                   <div className="w-8 h-8 rounded bg-emerald-500/20 flex items-center justify-center flex-shrink-0 border border-emerald-500/30">
